@@ -1,0 +1,44 @@
+# Ignore Visual Studio specific files
+.vscode/
+.vs/
+*.user
+*.suo
+*.cache
+*.csproj.user
+*.sln.docstates
+
+# Ignore build outputs
+bin/
+obj/
+out/
+*.exe
+*.dll
+*.pdb
+*.log
+*.psess
+
+# Ignore dependencies
+packages/
+*.nupkg
+project.lock.json
+project.assets.json
+
+# Ignore temporary files
+*.tmp
+*.cache
+*.bak
+*.swp
+*.sln.ide
+
+# Ignore compiled files
+*.dbmdl
+*.jfm
+
+# Ignore user-secrets (if using ASP.NET Core secrets)
+secrets.json
+
+# Ignore logs & debug files
+logs/
+*.log
+Debug/
+Rele
