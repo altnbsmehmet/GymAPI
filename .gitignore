@@ -42,3 +42,8 @@ logs/
 *.log
 Debug/
 Rele
+
+# other
+appsettings.json
+appsettings.Development.json
+Properties/
