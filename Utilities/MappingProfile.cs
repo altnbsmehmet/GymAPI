@@ -20,7 +20,7 @@ public class MappingProfile : Profile
         CreateMap<SubscriptionDto, SubscriptionDomain>();
         CreateMap<SubscriptionDomain, SubscriptionDto>();
 
-        CreateMap<UserDto, UserDomain>();
-        CreateMap<UserDomain, UserDto>();
+        CreateMap<SignUpDto, UserDomain>();
+        CreateMap<UserDomain, SignUpDto>();
     }
 }

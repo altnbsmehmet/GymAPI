@@ -2,13 +2,13 @@ using Data;
 
 public interface ISubscriptionService
 {
-    Task<string> CreateAsync(SubscriptionDto subscriptionDto);
+    Task<ResponseBase> CreateAsync(SubscriptionDto subscriptionDto);
 
-    Task<List<Subscription>> GetAllAsync();
+    Task<GetSubscriptionsResponse> GetAllAsync();
 
-    Task<Subscription> GetByIdAsync(int id);
+    Task<GetSubscriptionResponse> GetByIdAsync(int id);
 
-    Task<string> UpdateAsync(int id, SubscriptionDto subscriptionInfo);
+    Task<ResponseBase> UpdateAsync(int id, SubscriptionDto subscriptionInfo);
 
-    Task<string> DeleteAsync(int id);
+    Task<ResponseBase> DeleteAsync(int id);
 }

@@ -13,33 +13,45 @@ public class MembershipService : IMembershipService
         _mapper = mapper;
     }
 
-    public async Task<string> CreateAsync(MembershipDto membershipDto)
+    public async Task<ResponseBase> CreateAsync(MembershipDto membershipDto)
     {
-        var membershipDomain = _mapper.Map<MembershipDto, MembershipDomain>(membershipDto);
+        try {
+            var membershipDomain = _mapper.Map<MembershipDto, MembershipDomain>(membershipDto);
 
-        var membership = new Membership {
-            Type = membershipDomain.Type,
-            Duration = membershipDomain.Duration,
-            Price = membershipDomain.Price
-        };
-        await _context.Membership.AddAsync(membership);
-        await _context.SaveChangesAsync();
-        return $"Membership with type {membership.Type} with duration {membership.Duration} and with price {membership.Price} successfully created.";
+            var membership = new Membership {
+                Type = membershipDomain.Type,
+                Duration = membershipDomain.Duration,
+                Price = membershipDomain.Price
+            };
+            await _context.Membership.AddAsync(membership);
+            await _context.SaveChangesAsync();
+            return new ResponseBase { IsSuccess = true, Message = $"Membership with type {membership.Type} with duration {membership.Duration} and with price {membership.Price} successfully created." };
+        } catch (Exception e) {
+            return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}" };
+        }
     }
 
-    public async Task<List<Membership>> GetAllAsync()
+    public async Task<GetMembershipsResponse> GetAllAsync()
     {
-        var memberships = await _context.Membership.ToListAsync();
-        return memberships;
+        try {
+            var memberships = await _context.Membership.ToListAsync();
+            return new GetMembershipsResponse { IsSuccess = true, Message = "Memberships read.", Memberships = memberships };
+        } catch (Exception e) {
+            return new GetMembershipsResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
+        }
     }
 
-    public async Task<Membership> GetByIdAsync(int id)
+    public async Task<GetMembershipResponse> GetByIdAsync(int id)
     {
-        var membership = await _context.Membership.FirstOrDefaultAsync(membership => membership.Id == id);
-        return membership;
+        try {
+            var membership = await _context.Membership.FirstOrDefaultAsync(membership => membership.Id == id);
+            return new GetMembershipResponse { IsSuccess = true, Message = "Membership read.", Membership = membership };
+        } catch (Exception e) {
+            return new GetMembershipResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
+        }
     }
 
-    public async Task<string> UpdateAsync(MembershipDto membershipDto, int id)
+    public async Task<ResponseBase> UpdateAsync(MembershipDto membershipDto, int id)
     {
         try {
             var membershipDomain = _mapper.Map<MembershipDto, MembershipDomain>(membershipDto);
@@ -49,21 +61,21 @@ public class MembershipService : IMembershipService
             membership.Duration = membershipDomain.Duration;
             membership.Price = membershipDomain.Price;
             await _context.SaveChangesAsync();
-            return $"Membership successfully patched to: Type {membership.Type}, Duration {membership.Duration}, Price {membership.Price}";
+            return new ResponseBase { IsSuccess = true, Message = $"Membership successfully patched to: Type {membership.Type}, Duration {membership.Duration}, Price {membership.Price}" };
         } catch (Exception e) {
-            return $"Exception --> {e}";
+            return new ResponseBase { IsSuccess = false, Message = $"Exception --> {e}" };
         }
     }
 
-    public async Task<string> DeleteAsync(int id)
+    public async Task<ResponseBase> DeleteAsync(int id)
     {
         try {
-        var membership = await _context.Membership.FirstOrDefaultAsync(membership => membership.Id == id);
-        _context.Remove(membership);
-        await _context.SaveChangesAsync();
-        return $"Membership type {membership.Type} with duration {membership.Duration} and with price {membership.Price} successfully deleted.";
+            var membership = await _context.Membership.FirstOrDefaultAsync(membership => membership.Id == id);
+            _context.Remove(membership);
+            await _context.SaveChangesAsync();
+            return new ResponseBase { IsSuccess = true, Message = $"Membership type {membership.Type} with duration {membership.Duration} and with price {membership.Price} successfully deleted." };
         } catch (Exception e) {
-            return $"Exception --> {e}";
+            return new ResponseBase { IsSuccess = false, Message = $"Exception --> {e}" };
         }
     }
 

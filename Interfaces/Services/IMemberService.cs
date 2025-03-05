@@ -2,13 +2,14 @@ using Data;
 
 public interface IMemberService
 {
-    Task<string> CreateAsync(MemberDomain memberDomain);
+    Task<GetMemberResponse> CreateAsync(MemberDomain memberDomain);
 
-    Task<List<Member>> GetAllAsync();
+    Task<GetMembersResponse> GetAllAsync();
 
-    Task<Member> GetByIdAsync(int id);
+    Task<GetMemberResponse> GetByIdAsync(int id);
+    Task<GetMemberResponse> GetByUserIdAsync (string id);
 
-    Task<string> UpdateAsync(UserDomain userDomain, string id);
+    Task<ResponseBase> UpdateAsync(UserDomain userDomain, string id);
 
-    Task<string> DeleteAsync(string id);
+    Task<ResponseBase> DeleteAsync(string id);
 }

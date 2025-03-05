@@ -12,15 +12,6 @@ public class MembershipController : ControllerBase
     {
         _membershipService = membershipService;
     }
-
-    [HttpPost("test")]
-    public async Task<IActionResult> Test()
-    {
-        EmployeeDto dto = new EmployeeDto { Position = "Employee", Salary = 299, UserId = "5fglöş"};
-        Type type = dto.GetType();
-        var properties = type.GetProperties();
-        return Ok(properties);
-    }
     
     [HttpPost("create")]
     public async Task<IActionResult> CreateMembership([FromBody] MembershipDto membershipDto)

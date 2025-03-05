@@ -2,19 +2,19 @@ using Data;
 
 public interface IUserService
 {
-    Task<ApplicationUser> GetCurrentUserAsync();
+    Task<GetUserResponse> GetCurrentUserAsync();
 
-    Task<Object> SignInAsync(SignInDto signInInfo);
+    Task<SignInResponse> SignInAsync(SignInDto signInInfo);
 
-    Task<string> SignUpAsync(UserDto signUpData);
+    Task<ResponseBase> SignUpAsync(SignUpDto signUpData);
 
     Task SignOutAsync();
 
-    Task<List<ApplicationUser>> GetAllAsync();
+    Task<GetUsersResponse> GetAllAsync();
 
-    Task<ApplicationUser> GetByIdAsync(string userId);
+    Task<GetUserResponse> GetByIdAsync(string userId);
 
-    Task<string> UpdateAsync(UserDto userInfo, string id);
+    Task<ResponseBase> UpdateAsync(SignUpDto userInfo, string id);
 
-    Task<string> DeleteAsnyc(string id);
+    Task<ResponseBase> DeleteAsnyc(string id);
 }

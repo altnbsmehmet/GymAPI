@@ -72,6 +72,9 @@ namespace GymManagementSystem.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("ProfilePhotoPath")
+                        .HasColumnType("text");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasColumnType("text");
@@ -108,6 +111,9 @@ namespace GymManagementSystem.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AboutMe")
+                        .HasColumnType("text");
 
                     b.Property<string>("Position")
                         .IsRequired()

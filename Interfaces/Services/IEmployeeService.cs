@@ -3,13 +3,17 @@ using Data;
 public interface IEmployeeService
 {
     
-    Task<string> CreateAsync(EmployeeDomain employeeDomain);
+    Task<GetEmployeeResponse> CreateAsync(EmployeeDomain employeeDomain);
 
-    Task<List<Employee>> GetAllAsync();
+    Task<GetEmployeesResponse> GetAllAsync();
 
-    Task<Employee> GetByIdAsync(int id);
+    Task<GetEmployeesResponse> GetAllByPositionAsync(string position);
 
-    Task<string> UpdateAsync(UserDomain userDomain, string id);
+    Task<GetEmployeeResponse> GetByIdAsync(int id);
 
-    Task<string> DeleteAsync(string id);
+    Task<GetEmployeeResponse> GetByUserIdAsync (string id);
+
+    Task<ResponseBase> UpdateAsync(UserDomain userDomain, string id);
+
+    Task<ResponseBase> DeleteAsync(string id);
 }

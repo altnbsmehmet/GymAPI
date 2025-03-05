@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using System.Diagnostics.Contracts;
 using Microsoft.AspNetCore.Identity;
 
 namespace Data
@@ -7,5 +9,10 @@ namespace Data
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string Role { get; set; }
+        public string? ProfilePhotoPath { get; set; }
+
+        [NotMapped]
+        public string ProfilePhoto { get; set; }
+
     }
 }

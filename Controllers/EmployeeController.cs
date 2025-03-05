@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 
 [ApiController]
@@ -16,6 +17,15 @@ public class EmployeeController : ControllerBase
     public async Task<IActionResult> GetAllEmployees()
     {
         var employees = await _employeeService.GetAllAsync();
+        if (!employees.IsSuccess) return BadRequest(employees);
+        return Ok(employees);
+    }
+
+    [HttpGet("getall/{position}")]
+    public async Task<IActionResult> GetAllEmployeesByPosition(string position)
+    {
+        var employees = await _employeeService.GetAllByPositionAsync(position);
+        if (!employees.IsSuccess) return BadRequest(employees);
         return Ok(employees);
     }
 
@@ -23,6 +33,7 @@ public class EmployeeController : ControllerBase
     public async Task<IActionResult> GetEmployeeById(int id)
     {
         var employee =  await _employeeService.GetByIdAsync(id);
+        if (!employee.IsSuccess) return BadRequest(employee);
         return Ok(employee);
     }
 

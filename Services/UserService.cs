@@ -31,73 +31,88 @@ public class UserService : IUserService
         _memberService = memberService;
     }
 
-    public async Task<ApplicationUser> GetCurrentUserAsync()
+    public async Task<GetUserResponse> GetCurrentUserAsync()
     {
-        var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
-        return user;
-    }
-
-    public async Task<Object> SignInAsync(SignInDto signInDto)
-    {   
         try {
-           var signInDomain = _mapper.Map<SignInDto, SignInDomain>(signInDto);
-            var user = await _userManager.FindByNameAsync(signInDomain.UserName);
-            if (user == null) return "UserName not found.";
+            var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
 
-            var result = await _signInManager.CheckPasswordSignInAsync(user, signInDomain.Password, false);
-            if (!result.Succeeded) return "Password is invalid.";
+            user.ProfilePhoto = $"{_httpContextAccessor.HttpContext.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/{user.ProfilePhotoPath}";
 
-            var token = GenerateJwtToken(user);
-            return new { message = $"Login Successfull for user {user.UserName}.", Token = token };
+            var employeeResult = await _employeeService.GetByUserIdAsync(user.Id);
+            if (employeeResult.IsSuccess) {
+                return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user, Employee = employeeResult.Employee };
+            }
+
+            var memberResult = await _memberService.GetByUserIdAsync(user.Id);
+            if (memberResult.IsSuccess) {
+                return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user, Member = memberResult.Member };                
+            }
+
+            return new GetUserResponse { IsSuccess = false, Message = "User couldn't find." };
         } catch (Exception e) {
-            return $"Exception --> {e.Message}";
+            return new GetUserResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };
         }
     }
 
-    public async Task<string> SignUpAsync(UserDto userDto)
+    public async Task<SignInResponse> SignInAsync(SignInDto signInDto)
     {
-        var userDomain = _mapper.Map<UserDto, UserDomain>(userDto);
-        
+        try {
+            var signInDomain = _mapper.Map<SignInDto, SignInDomain>(signInDto);
+            var user = await _userManager.FindByNameAsync(signInDomain.UserName);
+            if (user == null) return new SignInResponse { IsSuccess = false, Message = "UserName not found." };
+
+            var result = await _signInManager.CheckPasswordSignInAsync(user, signInDomain.Password, false);
+            if (!result.Succeeded) return new SignInResponse { IsSuccess = false, Message = "Password is invalid." };
+
+            var token = GenerateJwtToken(user);
+            return new SignInResponse { IsSuccess = true, Message = $"Login Successfull for user {user.UserName}.", Token = token };
+        } catch (Exception e) {
+            return new SignInResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };
+        }
+    }
+
+    public async Task<ResponseBase> SignUpAsync(SignUpDto signUpDto)
+    {
+        var userDomain = _mapper.Map<SignUpDto, UserDomain>(signUpDto);
+
         var user = new ApplicationUser {
             UserName = userDomain.UserName,
             FirstName = userDomain.FirstName,
             LastName = userDomain.LastName,
-            Role = userDomain.Role
+            Role = userDomain.Role,
         };
 
-        if (userDomain.Role == "Employee") {
-            try {
-                var userResult = await _userManager.CreateAsync(user, userDomain.Password);
-                if (userResult.Succeeded) {
-                    var employeeResult = await _employeeService.CreateAsync(new EmployeeDomain {
-                        UserId = user.Id,
-                        Position = userDomain.Position,
-                        Salary = (int)userDomain.Salary
-                    });
-                    return employeeResult;
-                } else {
-                    return $"Error signing up an employee: {string.Join(", ", userResult.Errors.Select(e => e.Description))}";
-                }
-            } catch (Exception e) {
-                if (e.InnerException != null) return $"Error --> {e.Message} Inner Exception --> {e.InnerException.Message}";
-                else return $"Error --> {e.Message}";
-            }
-        } else if (userDomain.Role == "Member") {
-            try {
-                var userResult = await _userManager.CreateAsync(user, userDomain.Password);
-                if (userResult.Succeeded) {
-                    var memberResult = await _memberService.CreateAsync(new MemberDomain {
-                        UserId = user.Id
-                    });
-                    return memberResult;
-                } else {
-                    return $"Error signing up a member: {string.Join(", ", userResult.Errors.Select(e => e.Description))}";
-                }
-            } catch (Exception e) {
-                return $"Error --> {e.Message}";
-            }
+        var userResult = await _userManager.CreateAsync(user, userDomain.Password);
+        if (!userResult.Succeeded) {
+            return new ResponseBase { IsSuccess = false, Message = $"Error signing up: {string.Join(", ", userResult.Errors.Select(e => e.Description))}" };
         }
-        return "Wrong role.";
+
+        if (signUpDto.ProfilePhoto != null && signUpDto.ProfilePhoto.Length > 0) {
+            var folder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "Uploads/ProfilePhoto");
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(signUpDto.ProfilePhoto.FileName)}";
+            var filePath = Path.Combine(folder, fileName);
+            using (var stream = new FileStream(filePath, FileMode.Create)) {
+                await signUpDto.ProfilePhoto.CopyToAsync(stream);
+            }
+            user.ProfilePhotoPath = $"Uploads/ProfilePhoto/{fileName}";
+            await _userManager.UpdateAsync(user);
+        }
+
+        if (userDomain.Role == "Employee") {
+            var employeeResult = await _employeeService.CreateAsync(new EmployeeDomain {
+                UserId = user.Id,
+                Position = userDomain.Position,
+                Salary = (int)userDomain.Salary
+            });
+            return new ResponseBase { IsSuccess = true, Message = "Employee signed up." };
+        } else if (userDomain.Role == "Member") {
+            var memberResult = await _memberService.CreateAsync(new MemberDomain {
+                UserId = user.Id
+            });
+            return new ResponseBase { IsSuccess = true, Message = "Member signed up." };
+        }
+        
+        return new ResponseBase { IsSuccess = false, Message = "Wrong role." };
     }
 
     public async Task SignOutAsync()
@@ -105,50 +120,54 @@ public class UserService : IUserService
         await _signInManager.SignOutAsync();
     }
 
-    public async Task<List<ApplicationUser>> GetAllAsync()
+    public async Task<GetUsersResponse> GetAllAsync()
     {
-        return await _context.Users.ToListAsync();
+        var users = await _context.Users.ToListAsync();
+        if (users == null) return new GetUsersResponse { IsSuccess = false, Message = "Users couldn't read." };
+        return new GetUsersResponse { IsSuccess = true, Message = "Users read.", Users = users };
     }
 
-    public async Task<ApplicationUser> GetByIdAsync(string userId)
+    public async Task<GetUserResponse> GetByIdAsync(string userId)
     {
-        return await _context.Users.FindAsync(userId);
+        var user =  await _context.Users.FindAsync(userId);
+        if (user == null) new GetUserResponse { IsSuccess = false, Message = "User coudln't read.", User = user };
+        return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user };
     }
 
-    public async Task<string> UpdateAsync(UserDto userDto, string id)
+    public async Task<ResponseBase> UpdateAsync(SignUpDto signUpDto, string id)
     {
         try {
-            var userDomain = _mapper.Map<UserDto, UserDomain>(userDto);
+            var userDomain = _mapper.Map<SignUpDto, UserDomain>(signUpDto);
 
             if (userDomain.Role == "Employee") {
-                await _employeeService.UpdateAsync(userDomain, id);
-                return "";
+                var employeeUpdate = await _employeeService.UpdateAsync(userDomain, id);
+                return employeeUpdate;
             } else if (userDomain.Role == "Member") {
-                await _memberService.UpdateAsync(userDomain, id);
-                return "";
+                var memberUpdate = await _memberService.UpdateAsync(userDomain, id);
+                return memberUpdate;
             }
             var user = await _userManager.FindByIdAsync(id);
             user.FirstName = userDomain.FirstName;
             user.LastName = userDomain.LastName;
             user.Role = userDomain.Role;
             await _userManager.UpdateAsync(user);
-            return "";
+            return new ResponseBase { IsSuccess = true, Message = "User updated" };
         } catch (Exception e) {
-            return $"Error --> {e.Message}";
+            return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}" };
         }
     }
 
-    public async Task<string> DeleteAsnyc(string id)
+    public async Task<ResponseBase> DeleteAsnyc(string id)
     {
         try {
             var user = await _userManager.FindByIdAsync(id);
             if (user.Role == "Employee") await _employeeService.DeleteAsync(id);
             if (user.Role == "Member") await _memberService.DeleteAsync(id);
             var result = await _userManager.DeleteAsync(user);
-            if (!result.Succeeded) return $"Error deleting user: {string.Join(", ", result.Errors.Select(e => e.Description))}";
-            return $"User deleted successfully.";
+            if (!result.Succeeded) return new ResponseBase { IsSuccess = false, Message = $"Error deleting user: {string.Join(", ", result.Errors.Select(e => e.Description))}" };
+            return new ResponseBase { IsSuccess = true, Message = $"User deleted." };
         } catch (Exception e) {
-            return $"Exception --> {e.Message}";
+            return new ResponseBase { IsSuccess = false, Message = $"Exception --> {e.Message}" };
         }
     }
 
