@@ -59,6 +59,7 @@ public class MemberService : IMemberService
             var member = await _context.Member
                 .Include(e => e.User)
                 .FirstOrDefaultAsync(member => member.UserId == id);
+            if (member == null) return new GetMemberResponse { IsSuccess = false, Message = "No member associated with given UserId." };
             return new GetMemberResponse { IsSuccess = true, Message = "member read.", Member = member};
         } catch (Exception e) {
             return new GetMemberResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };

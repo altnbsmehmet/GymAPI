@@ -1,8 +1,9 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 
 [ApiController]
-[Route("/api/subscription")]
+[Route("api/subscription")]
 public class SubscriptionController : ControllerBase
 {
     private readonly ISubscriptionService _subscriptionService;
@@ -15,14 +16,15 @@ public class SubscriptionController : ControllerBase
     [HttpPost("create")]
     public async Task<IActionResult> CreateSubscription([FromBody] SubscriptionDto subscriptionInfo)
     {
-        var message =  await _subscriptionService.CreateAsync(subscriptionInfo);
-        return Ok(message);
+        var result =  await _subscriptionService.CreateAsync(subscriptionInfo);
+        return Ok(result);
     }
 
-    [HttpGet("getall")]
-    public async Task<IActionResult> GetAllSubscriptions()
+    [Authorize]
+    [HttpGet("getallbymemberid")]
+    public async Task<IActionResult> GetAllSubscriptionsByMemberId()
     {
-        var subscriptions = await _subscriptionService.GetAllAsync();
+        var subscriptions = await _subscriptionService.GetAllByMemberIdAsync();
         return Ok(subscriptions);
     }
 

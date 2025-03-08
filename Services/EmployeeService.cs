@@ -79,6 +79,7 @@ public class EmployeeService : IEmployeeService
             var employee = await _context.Employee
                 .Include(e => e.User)
                 .FirstOrDefaultAsync(employee => employee.UserId == id);
+            if (employee == null) return new GetEmployeeResponse { IsSuccess = false, Message = "No employee associated with given UserId." };
             return new GetEmployeeResponse { IsSuccess = true, Message = "Employee read.", Employee = employee};
         } catch (Exception e) {
             return new GetEmployeeResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };

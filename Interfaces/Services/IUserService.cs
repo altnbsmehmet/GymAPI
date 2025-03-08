@@ -3,12 +3,13 @@ using Data;
 public interface IUserService
 {
     Task<GetUserResponse> GetCurrentUserAsync();
+    Task<UserAuthorizationResponse> AuthorizeUserAsync();
 
     Task<SignInResponse> SignInAsync(SignInDto signInInfo);
 
     Task<ResponseBase> SignUpAsync(SignUpDto signUpData);
 
-    Task SignOutAsync();
+    Task<ResponseBase> SignOutAsync();
 
     Task<GetUsersResponse> GetAllAsync();
 

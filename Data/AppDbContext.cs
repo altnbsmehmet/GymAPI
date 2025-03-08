@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 
 
-namespace Data 
+namespace Data
 {
     public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
@@ -20,7 +20,8 @@ namespace Data
 
             modelBuilder.Entity<IdentityRole>().HasData(
                 new IdentityRole { Id = "1", Name = "Employee", NormalizedName = "EMPLOYEE" },
-                new IdentityRole { Id = "2", Name = "Member", NormalizedName = "MEMBER" }
+                new IdentityRole { Id = "2", Name = "Member", NormalizedName = "MEMBER" },
+                new IdentityRole { Id = "3", Name = "Admin", NormalizedName = "ADMIN" }
             );
 
             modelBuilder.Entity<Employee>()
@@ -46,8 +47,8 @@ namespace Data
             
             modelBuilder.Entity<Subscription>()
                 .HasOne(s => s.Membership)
-                .WithOne(m => m.Subscription)
-                .HasForeignKey<Subscription>(s => s.MembershipId);
+                .WithMany()
+                .HasForeignKey(s => s.MembershipId);
         }
 
     }

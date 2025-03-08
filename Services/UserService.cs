@@ -6,6 +6,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Security.Claims;
 using AutoMapper;
+using Newtonsoft.Json;
 
 
 public class UserService : IUserService
@@ -40,18 +41,44 @@ public class UserService : IUserService
 
             var employeeResult = await _employeeService.GetByUserIdAsync(user.Id);
             if (employeeResult.IsSuccess) {
-                return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user, Employee = employeeResult.Employee };
+                return new GetUserResponse { IsSuccess = true, Message = "Employee read.", User = user, Employee = employeeResult.Employee };
             }
 
             var memberResult = await _memberService.GetByUserIdAsync(user.Id);
             if (memberResult.IsSuccess) {
-                return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user, Member = memberResult.Member };                
+                return new GetUserResponse { IsSuccess = true, Message = "Member read.", User = user, Member = memberResult.Member };                
             }
+
+            if (user.Role == "Admin") return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user };
 
             return new GetUserResponse { IsSuccess = false, Message = "User couldn't find." };
         } catch (Exception e) {
             return new GetUserResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };
         }
+    }
+
+    public async Task<UserAuthorizationResponse> AuthorizeUserAsync()
+    {
+        var token = GetTokenFromRequest();
+        if (string.IsNullOrEmpty(token))return new UserAuthorizationResponse { IsSuccess = false, Message = "Token is missing" };
+        //Console.WriteLine($"\n\nToken\n{token}\n");
+
+        var principal = GetUserClaimsFormToken(token);
+        if (principal == null) return new UserAuthorizationResponse { IsSuccess = false, Message = "Invalid token" };
+        //Console.WriteLine($"\n\tPrincipal\n{JsonConvert.SerializeObject(principal, Formatting.Indented)}\n");
+
+        var userResult = await GetByIdAsync(principal.UserId);
+        if (!userResult.IsSuccess) return new UserAuthorizationResponse { IsSuccess = false, Message = userResult.Message };
+        //Console.WriteLine($"\n\tUserResult\n{JsonConvert.SerializeObject(userResult, Formatting.Indented)}\n\n");
+
+        var roles = await _userManager.GetRolesAsync(userResult.User);
+        var role = roles.FirstOrDefault();
+
+        return new UserAuthorizationResponse {
+            IsSuccess = true,
+            Message = "User is authorized",
+            Role = role
+        };
     }
 
     public async Task<SignInResponse> SignInAsync(SignInDto signInDto)
@@ -65,7 +92,7 @@ public class UserService : IUserService
             if (!result.Succeeded) return new SignInResponse { IsSuccess = false, Message = "Password is invalid." };
 
             var token = GenerateJwtToken(user);
-            return new SignInResponse { IsSuccess = true, Message = $"Login Successfull for user {user.UserName}.", Token = token };
+            return new SignInResponse { IsSuccess = true, Message = $"Login Successfull for user {user.UserName}.", Token = token, Role = user.Role };
         } catch (Exception e) {
             return new SignInResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };
         }
@@ -85,6 +112,12 @@ public class UserService : IUserService
         var userResult = await _userManager.CreateAsync(user, userDomain.Password);
         if (!userResult.Succeeded) {
             return new ResponseBase { IsSuccess = false, Message = $"Error signing up: {string.Join(", ", userResult.Errors.Select(e => e.Description))}" };
+        }
+
+        var roleResult = await _userManager.AddToRoleAsync(user, userDomain.Role);
+        if (!roleResult.Succeeded)
+        {
+            return new ResponseBase { IsSuccess = false, Message = $"Error assigning role: {string.Join(", ", roleResult.Errors.Select(e => e.Description))}" };
         }
 
         if (signUpDto.ProfilePhoto != null && signUpDto.ProfilePhoto.Length > 0) {
@@ -110,14 +143,21 @@ public class UserService : IUserService
                 UserId = user.Id
             });
             return new ResponseBase { IsSuccess = true, Message = "Member signed up." };
+        } else if (userDomain.Role == "Admin") {
+            return new ResponseBase { IsSuccess = true, Message = "Member signed up." };
         }
-        
+
         return new ResponseBase { IsSuccess = false, Message = "Wrong role." };
     }
 
-    public async Task SignOutAsync()
+    public async Task<ResponseBase> SignOutAsync()
     {
-        await _signInManager.SignOutAsync();
+        try {
+            await _signInManager.SignOutAsync();
+            return new ResponseBase { IsSuccess = true, Message = $"Signed out." };
+        } catch (Exception e) {
+            return new ResponseBase { IsSuccess = false, Message = $"Exception --> {e.Message}." };
+        }
     }
 
     public async Task<GetUsersResponse> GetAllAsync()
@@ -134,6 +174,18 @@ public class UserService : IUserService
         return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user };
     }
 
+    public async Task<GetUserResponse> GetByUserNameAsync(string userName)
+    {
+        try {
+            var user =  await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName);
+            if (user == null) return new GetUserResponse { IsSuccess = false, Message = "User couldn't read." };
+            return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user };
+        } catch (Exception e) {
+            return new GetUserResponse { IsSuccess = false, Message = $"Exception --> {e.Message}." };
+        }
+
+    }
+
     public async Task<ResponseBase> UpdateAsync(SignUpDto signUpDto, string id)
     {
         try {
@@ -141,18 +193,18 @@ public class UserService : IUserService
 
             if (userDomain.Role == "Employee") {
                 var employeeUpdate = await _employeeService.UpdateAsync(userDomain, id);
-                return employeeUpdate;
             } else if (userDomain.Role == "Member") {
                 var memberUpdate = await _memberService.UpdateAsync(userDomain, id);
-                return memberUpdate;
             }
             var user = await _userManager.FindByIdAsync(id);
             user.FirstName = userDomain.FirstName;
             user.LastName = userDomain.LastName;
-            user.Role = userDomain.Role;
+            user.UserName = userDomain.UserName;
             await _userManager.UpdateAsync(user);
             return new ResponseBase { IsSuccess = true, Message = "User updated" };
         } catch (Exception e) {
+            if (e.InnerException != null)
+                return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}, Inner Exception: {e.InnerException.Message}" };
             return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}" };
         }
     }
@@ -181,6 +233,9 @@ public class UserService : IUserService
         if (!string.IsNullOrEmpty(user.Id))
             claims.Add(new Claim(JwtRegisteredClaimNames.Sub, user.Id));
 
+        if (!string.IsNullOrEmpty(user.Id))
+        claims.Add(new Claim("user_id", user.Id));  // Yeni claim
+
         if (!string.IsNullOrEmpty(user.UserName))
             claims.Add(new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName));
 
@@ -206,4 +261,56 @@ public class UserService : IUserService
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
+
+    private UserClaims GetUserClaimsFormToken(string token)
+    {
+        try {
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+
+            var parameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = _config["Jwt:Issuer"],
+                ValidAudience = _config["Jwt:Audience"],
+                IssuerSigningKey = new SymmetricSecurityKey(key)
+            };
+
+            // Token'ı doğrulama
+            var principal = tokenHandler.ValidateToken(token, parameters, out SecurityToken validatedToken);
+
+            // JWT geçerli ise kullanıcı bilgilerini al
+            if (validatedToken is JwtSecurityToken jwtSecurityToken && jwtSecurityToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase)) {
+                var userInfo = new UserClaims {
+                    UserId = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value 
+                         ?? principal.FindFirst("user_id")?.Value,
+                    UserName = principal.FindFirst(ClaimTypes.Name)?.Value,
+                    Email = principal.FindFirst(ClaimTypes.Email)?.Value,
+                    Roles = principal.FindAll(ClaimTypes.Role).Select(c => c.Value).ToList()
+                };
+
+                return userInfo;
+            }
+
+            return null; // Token geçersiz
+        }
+        catch {
+            return null; // Hata durumunda null döndür
+        }
+    }
+
+    private string GetTokenFromRequest()
+    {
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        var token = httpContext.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
+
+        if (string.IsNullOrEmpty(token)) token = httpContext.Request.Cookies["jwt"];
+
+        return token;
+    }
+
 }

@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using Newtonsoft.Json;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 
 [ApiController]
@@ -14,20 +15,29 @@ public class UserController : ControllerBase
         _userService = userService;
     }
 
+    [Authorize]
+    [HttpGet("getcurrentuser")]
+    public async Task<IActionResult> GetCurrentUser()
+    {
+        var user = await _userService.GetCurrentUserAsync();
+        return Ok(user);
+    }
+
+    [Authorize]
+    [HttpGet("authorizeuser")]
+    public async Task<IActionResult> AuthorizeUser()
+    {
+        Console.WriteLine("\n\nAuthorize endpoint Hit!\n\n");
+        var result = await _userService.AuthorizeUserAsync();
+        return Ok(result);
+    }
+
     [HttpPost("signin")]
     public async Task<IActionResult> SignIn([FromBody] SignInDto signInDto)
     {
         var result = await _userService.SignInAsync(signInDto);
-        if (!result.IsSuccess) return BadRequest(result);
+        if (!result.IsSuccess) return Ok(result);
 
-        var token = result.Token;
-        Response.Cookies.Append("jwt", token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Lax,
-                Expires = DateTime.UtcNow.AddHours(1),
-            });
         return Ok(result);
     }
 
@@ -38,11 +48,18 @@ public class UserController : ControllerBase
         return Ok(result);
     }
 
+    [Authorize]
+    [HttpGet("signout")]
+    public async Task<IActionResult> SignOut()
+    {
+        var result = await _userService.SignOutAsync();
+        return Ok(result);
+    }
+
     [HttpGet("getall")]
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _userService.GetAllAsync();
-        if (!users.IsSuccess) return BadRequest(users);
         return Ok(users);
     }
 
@@ -50,24 +67,15 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetUserById(string id)
     {
         var user = await _userService.GetByIdAsync(id);
-        if (!user.IsSuccess) return BadRequest(user);
         return Ok(user);
     }
 
     [Authorize]
-    [HttpGet("getcurrentuser")]
-    public async Task<IActionResult> GetCurrentUser()
-    {
-        var user = await _userService.GetCurrentUserAsync();
-        if (!user.IsSuccess) return BadRequest(user);
-        return Ok(user);
-    }
-
     [HttpPatch("update/{id}")]
     public async Task<IActionResult> UpdateUser([FromBody] SignUpDto signUpDto, string id)
     {
+        Console.WriteLine($"\nUserResult\n{JsonConvert.SerializeObject(signUpDto)}\nAnd id: {id}\n");
         var result = await _userService.UpdateAsync(signUpDto, id);
-        if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
 
@@ -75,7 +83,6 @@ public class UserController : ControllerBase
     public async Task<IActionResult> DeleteUser(string id)
     {
         var result = await _userService.DeleteAsnyc(id);
-        if (!result.IsSuccess) return BadRequest(result);
         return Ok(result);
     }
 

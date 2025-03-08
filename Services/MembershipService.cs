@@ -71,8 +71,10 @@ public class MembershipService : IMembershipService
     {
         try {
             var membership = await _context.Membership.FirstOrDefaultAsync(membership => membership.Id == id);
+            if (membership == null) return new ResponseBase { IsSuccess = false, Message = "Membership not found." };
             _context.Remove(membership);
-            await _context.SaveChangesAsync();
+            int affectedRows =  await _context.SaveChangesAsync();
+            if (affectedRows == 0) return new ResponseBase { IsSuccess = false, Message = "Failed to delete membership." };
             return new ResponseBase { IsSuccess = true, Message = $"Membership type {membership.Type} with duration {membership.Duration} and with price {membership.Price} successfully deleted." };
         } catch (Exception e) {
             return new ResponseBase { IsSuccess = false, Message = $"Exception --> {e}" };

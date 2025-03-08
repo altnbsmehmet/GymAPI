@@ -3,6 +3,7 @@ using System;
 using Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace GymManagementSystem.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250306222931_RemovedMembershipToSubscriptionNavigation")]
+    partial class RemovedMembershipToSubscriptionNavigation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -247,12 +250,6 @@ namespace GymManagementSystem.Migrations
                             Id = "2",
                             Name = "Member",
                             NormalizedName = "MEMBER"
-                        },
-                        new
-                        {
-                            Id = "3",
-                            Name = "Admin",
-                            NormalizedName = "ADMIN"
                         });
                 });
 
@@ -393,7 +390,7 @@ namespace GymManagementSystem.Migrations
                         .IsRequired();
 
                     b.HasOne("Data.Membership", "Membership")
-                        .WithMany()
+                        .WithMany("Subscriptions")
                         .HasForeignKey("MembershipId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -455,6 +452,11 @@ namespace GymManagementSystem.Migrations
                 });
 
             modelBuilder.Entity("Data.Member", b =>
+                {
+                    b.Navigation("Subscriptions");
+                });
+
+            modelBuilder.Entity("Data.Membership", b =>
                 {
                     b.Navigation("Subscriptions");
                 });

@@ -4,7 +4,7 @@ public interface ISubscriptionService
 {
     Task<ResponseBase> CreateAsync(SubscriptionDto subscriptionDto);
 
-    Task<GetSubscriptionsResponse> GetAllAsync();
+    Task<GetSubscriptionsResponse> GetAllByMemberIdAsync();
 
     Task<GetSubscriptionResponse> GetByIdAsync(int id);
 
