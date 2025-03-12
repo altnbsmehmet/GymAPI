@@ -1,6 +1,4 @@
-using Data;
-
 public class GetMembershipResponse : ResponseBase
 {
-    public Membership Membership { get; set; }
+    public MembershipDto Membership { get; set; }
 }

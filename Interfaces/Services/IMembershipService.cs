@@ -8,6 +8,8 @@ public interface IMembershipService
 
     Task<GetMembershipResponse> GetByIdAsync(int id);
 
+    Task<ResponseBase> ToggleActivationByIdAsync(int id);
+
     Task<ResponseBase> UpdateAsync(MembershipDto membershipDto, int id);
 
     Task<ResponseBase> DeleteAsync(int id);

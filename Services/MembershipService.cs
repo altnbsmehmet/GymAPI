@@ -1,16 +1,23 @@
 using Microsoft.EntityFrameworkCore;
 using Data;
 using AutoMapper;
+using Newtonsoft.Json;
 
 
 public class MembershipService : IMembershipService
 {
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
-    public MembershipService(AppDbContext context, IMapper mapper)
+    private readonly IServiceProvider _serviceProvider;
+    public MembershipService(AppDbContext context, IMapper mapper, IServiceProvider serviceProvider)
     {
         _context = context;
         _mapper = mapper;
+        _serviceProvider = serviceProvider;
+    }
+    public IMemberService GetMemberService()
+    {
+        return _serviceProvider.GetRequiredService<IMemberService>();
     }
 
     public async Task<ResponseBase> CreateAsync(MembershipDto membershipDto)
@@ -21,21 +28,29 @@ public class MembershipService : IMembershipService
             var membership = new Membership {
                 Type = membershipDomain.Type,
                 Duration = membershipDomain.Duration,
-                Price = membershipDomain.Price
+                Price = membershipDomain.Price,
+                IsActive = true
             };
             await _context.Membership.AddAsync(membership);
             await _context.SaveChangesAsync();
             return new ResponseBase { IsSuccess = true, Message = $"Membership with type {membership.Type} with duration {membership.Duration} and with price {membership.Price} successfully created." };
         } catch (Exception e) {
-            return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}" };
+            var innerMessage = e.InnerException?.Message ?? "No inner exception";
+            return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}, InnerException --> {innerMessage}" };
         }
     }
 
     public async Task<GetMembershipsResponse> GetAllAsync()
     {
+        var _memberService = GetMemberService();
         try {
             var memberships = await _context.Membership.ToListAsync();
-            return new GetMembershipsResponse { IsSuccess = true, Message = "Memberships read.", Memberships = memberships };
+            var membershipsDto = _mapper.Map<List<Membership>, List<MembershipDto>>(memberships);
+            foreach (var membershipDto in membershipsDto) {
+                var subscribersResponse = await _memberService.GetAllByMembershipIdAsync((int)membershipDto.Id);
+                membershipDto.Subscribers = subscribersResponse.Members;
+            }
+            return new GetMembershipsResponse { IsSuccess = true, Message = "Memberships read.", Memberships = membershipsDto };
         } catch (Exception e) {
             return new GetMembershipsResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
         }
@@ -43,11 +58,35 @@ public class MembershipService : IMembershipService
 
     public async Task<GetMembershipResponse> GetByIdAsync(int id)
     {
+        var _memberService = GetMemberService();
         try {
+            Console.WriteLine($"\n\nid: {id}\n\n");
             var membership = await _context.Membership.FirstOrDefaultAsync(membership => membership.Id == id);
-            return new GetMembershipResponse { IsSuccess = true, Message = "Membership read.", Membership = membership };
+            var membershipDto = _mapper.Map<Membership, MembershipDto>(membership);
+            var subscribersResponse = await _memberService.GetAllByMembershipIdAsync(membership.Id);
+            membershipDto.Subscribers = subscribersResponse.Members;
+            return new GetMembershipResponse { IsSuccess = true, Message = "Membership read.", Membership = membershipDto };
         } catch (Exception e) {
             return new GetMembershipResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
+        }
+    }
+
+    public async Task<ResponseBase> ToggleActivationByIdAsync(int id)
+    {
+        try {
+            var membership = await _context.Membership.FirstOrDefaultAsync(membership => membership.Id == id);
+            if ((bool)membership.IsActive) {
+                membership.IsActive = false;
+                await _context.SaveChangesAsync();
+                return new ResponseBase { IsSuccess = true, Message = $"Membership deactivated." };
+            }
+            membership.IsActive = true;
+            await _context.SaveChangesAsync();
+            return new ResponseBase { IsSuccess = true, Message = $"Membership activated." };
+        } catch (Exception e) {
+            if (e.InnerException != null)
+                return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}, Inner Exception: {e.InnerException.Message}" };
+            return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}" };
         }
     }
 

@@ -17,10 +17,9 @@ public class UserService : IUserService
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IConfiguration _config;
-    private readonly IEmployeeService _employeeService;
-    private readonly IMemberService _memberService;
+    private readonly IServiceProvider _serviceProvider;
 
-    public UserService(AppDbContext context, IMapper mapper, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IHttpContextAccessor httpContextAccessor, IConfiguration config, IEmployeeService employeeService, IMemberService memberService)
+    public UserService(AppDbContext context, IMapper mapper, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IHttpContextAccessor httpContextAccessor, IConfiguration config, IServiceProvider serviceProvider)
     {
         _context = context;
         _mapper = mapper;
@@ -28,28 +27,37 @@ public class UserService : IUserService
         _signInManager = signInManager;
         _httpContextAccessor = httpContextAccessor;
         _config = config;
-        _employeeService = employeeService;
-        _memberService = memberService;
+        _serviceProvider = serviceProvider;
+    }
+    public IEmployeeService GetEmployeeService()
+    {
+        return _serviceProvider.GetRequiredService<IEmployeeService>();
+    }
+    public IMemberService GetMemberService()
+    {
+        return _serviceProvider.GetRequiredService<IMemberService>();
     }
 
     public async Task<GetUserResponse> GetCurrentUserAsync()
     {
+        var _employeeService = GetEmployeeService();
+        var _memberService = GetMemberService();
         try {
             var user = await _userManager.GetUserAsync(_httpContextAccessor.HttpContext.User);
 
-            user.ProfilePhoto = $"{_httpContextAccessor.HttpContext.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/{user.ProfilePhotoPath}";
+            var userDto = _mapper.Map<ApplicationUser, UserDto>(user);
 
             var employeeResult = await _employeeService.GetByUserIdAsync(user.Id);
             if (employeeResult.IsSuccess) {
-                return new GetUserResponse { IsSuccess = true, Message = "Employee read.", User = user, Employee = employeeResult.Employee };
+                return new GetUserResponse { IsSuccess = true, Message = "Employee read.", User = userDto, Employee = employeeResult.Employee };
             }
 
             var memberResult = await _memberService.GetByUserIdAsync(user.Id);
             if (memberResult.IsSuccess) {
-                return new GetUserResponse { IsSuccess = true, Message = "Member read.", User = user, Member = memberResult.Member };                
+                return new GetUserResponse { IsSuccess = true, Message = "Member read.", User = userDto, Member = memberResult.Member };                
             }
 
-            if (user.Role == "Admin") return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user };
+            if (user.Role == "Admin") return new GetUserResponse { IsSuccess = true, Message = "User read.", User = userDto };
 
             return new GetUserResponse { IsSuccess = false, Message = "User couldn't find." };
         } catch (Exception e) {
@@ -67,11 +75,11 @@ public class UserService : IUserService
         if (principal == null) return new UserAuthorizationResponse { IsSuccess = false, Message = "Invalid token" };
         //Console.WriteLine($"\n\tPrincipal\n{JsonConvert.SerializeObject(principal, Formatting.Indented)}\n");
 
-        var userResult = await GetByIdAsync(principal.UserId);
-        if (!userResult.IsSuccess) return new UserAuthorizationResponse { IsSuccess = false, Message = userResult.Message };
+        var user =  await _context.Users.FindAsync(principal.UserId);
+        if (user == null) new GetUserResponse { IsSuccess = false, Message = "User coudln't read." };
         //Console.WriteLine($"\n\tUserResult\n{JsonConvert.SerializeObject(userResult, Formatting.Indented)}\n\n");
 
-        var roles = await _userManager.GetRolesAsync(userResult.User);
+        var roles = await _userManager.GetRolesAsync(user);
         var role = roles.FirstOrDefault();
 
         return new UserAuthorizationResponse {
@@ -100,6 +108,9 @@ public class UserService : IUserService
 
     public async Task<ResponseBase> SignUpAsync(SignUpDto signUpDto)
     {
+        var _employeeService = GetEmployeeService();
+        var _memberService = GetMemberService();
+
         var userDomain = _mapper.Map<SignUpDto, UserDomain>(signUpDto);
 
         var user = new ApplicationUser {
@@ -144,7 +155,7 @@ public class UserService : IUserService
             });
             return new ResponseBase { IsSuccess = true, Message = "Member signed up." };
         } else if (userDomain.Role == "Admin") {
-            return new ResponseBase { IsSuccess = true, Message = "Member signed up." };
+            return new ResponseBase { IsSuccess = true, Message = "Admin signed up." };
         }
 
         return new ResponseBase { IsSuccess = false, Message = "Wrong role." };
@@ -164,14 +175,16 @@ public class UserService : IUserService
     {
         var users = await _context.Users.ToListAsync();
         if (users == null) return new GetUsersResponse { IsSuccess = false, Message = "Users couldn't read." };
-        return new GetUsersResponse { IsSuccess = true, Message = "Users read.", Users = users };
+        var usersDto = _mapper.Map<List<ApplicationUser>, List<UserDto>>(users);
+        return new GetUsersResponse { IsSuccess = true, Message = "Users read.", Users = usersDto };
     }
 
     public async Task<GetUserResponse> GetByIdAsync(string userId)
     {
         var user =  await _context.Users.FindAsync(userId);
-        if (user == null) new GetUserResponse { IsSuccess = false, Message = "User coudln't read.", User = user };
-        return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user };
+        var userDto = _mapper.Map<ApplicationUser, UserDto>(user);
+        if (user == null) new GetUserResponse { IsSuccess = false, Message = "User coudln't read." };
+        return new GetUserResponse { IsSuccess = true, Message = "User read.", User = userDto };
     }
 
     public async Task<GetUserResponse> GetByUserNameAsync(string userName)
@@ -179,29 +192,41 @@ public class UserService : IUserService
         try {
             var user =  await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName);
             if (user == null) return new GetUserResponse { IsSuccess = false, Message = "User couldn't read." };
-            return new GetUserResponse { IsSuccess = true, Message = "User read.", User = user };
+            var userDto = _mapper.Map<ApplicationUser, UserDto>(user);
+            return new GetUserResponse { IsSuccess = true, Message = "User read.", User = userDto };
         } catch (Exception e) {
             return new GetUserResponse { IsSuccess = false, Message = $"Exception --> {e.Message}." };
         }
 
     }
 
-    public async Task<ResponseBase> UpdateAsync(SignUpDto signUpDto, string id)
+    public async Task<ResponseBase> UpdateAsync(SignUpDto signUpDto, string userId)
     {
+        var _employeeService = GetEmployeeService();
+        var _memberService = GetMemberService();
         try {
             var userDomain = _mapper.Map<SignUpDto, UserDomain>(signUpDto);
 
-            if (userDomain.Role == "Employee") {
-                var employeeUpdate = await _employeeService.UpdateAsync(userDomain, id);
-            } else if (userDomain.Role == "Member") {
-                var memberUpdate = await _memberService.UpdateAsync(userDomain, id);
-            }
-            var user = await _userManager.FindByIdAsync(id);
+            var user = await _userManager.FindByIdAsync(userId);
             user.FirstName = userDomain.FirstName;
             user.LastName = userDomain.LastName;
             user.UserName = userDomain.UserName;
             await _userManager.UpdateAsync(user);
-            return new ResponseBase { IsSuccess = true, Message = "User updated" };
+
+            Console.WriteLine($"\n\n{JsonConvert.SerializeObject(userDomain, Formatting.Indented)}\n\n");
+
+            if (userDomain.Role == "Employee") {
+                var employeeUpdate = await _employeeService.UpdateAsync(userDomain, userId);
+                Console.WriteLine($"\n\n{JsonConvert.SerializeObject(employeeUpdate, Formatting.Indented)}\n\n");
+                return employeeUpdate;
+            } else if (userDomain.Role == "Member") {
+                var memberUpdateResponse = await _memberService.UpdateAsync(userDomain, userId);
+                return memberUpdateResponse;
+            } else if (userDomain.Role == "Admin") {
+                return new ResponseBase { IsSuccess = false, Message = "Admin Updated." };
+            }
+
+            return new ResponseBase { IsSuccess = false, Message = "Wrong Role" };
         } catch (Exception e) {
             if (e.InnerException != null)
                 return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}, Inner Exception: {e.InnerException.Message}" };
@@ -211,6 +236,8 @@ public class UserService : IUserService
 
     public async Task<ResponseBase> DeleteAsnyc(string id)
     {
+        var _employeeService = GetEmployeeService();
+        var _memberService = GetMemberService();
         try {
             var user = await _userManager.FindByIdAsync(id);
             if (user.Role == "Employee") await _employeeService.DeleteAsync(id);

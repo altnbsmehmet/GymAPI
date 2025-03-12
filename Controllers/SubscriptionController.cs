@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 
 [ApiController]
@@ -13,10 +14,12 @@ public class SubscriptionController : ControllerBase
         _subscriptionService = subscriptionService;
     }
     
-    [HttpPost("create")]
-    public async Task<IActionResult> CreateSubscription([FromBody] SubscriptionDto subscriptionInfo)
+    [HttpPost("create/{membershipId}")]
+    public async Task<IActionResult> CreateSubscription([FromBody] SubscriptionDto subscriptionDto, int membershipId)
     {
-        var result =  await _subscriptionService.CreateAsync(subscriptionInfo);
+        subscriptionDto.MembershipId = membershipId;
+        Console.WriteLine($"\n\n\tsubsdto\n{JsonConvert.SerializeObject(subscriptionDto, Formatting.Indented)}\n\n");
+        var result =  await _subscriptionService.CreateAsync(subscriptionDto);
         return Ok(result);
     }
 

@@ -91,9 +91,6 @@ namespace GymManagementSystem.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Id")
-                        .IsUnique();
-
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -164,6 +161,9 @@ namespace GymManagementSystem.Migrations
 
                     b.Property<int>("Duration")
                         .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("Price")
                         .HasColumnType("integer");
@@ -387,7 +387,7 @@ namespace GymManagementSystem.Migrations
             modelBuilder.Entity("Data.Subscription", b =>
                 {
                     b.HasOne("Data.Member", "Member")
-                        .WithMany("Subscriptions")
+                        .WithMany()
                         .HasForeignKey("MemberId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -452,11 +452,6 @@ namespace GymManagementSystem.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("Data.Member", b =>
-                {
-                    b.Navigation("Subscriptions");
                 });
 #pragma warning restore 612, 618
         }

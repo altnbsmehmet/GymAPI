@@ -1,5 +1,4 @@
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.Contracts;
 using Microsoft.AspNetCore.Identity;
 
 namespace Data
@@ -13,6 +12,5 @@ namespace Data
 
         [NotMapped]
         public string ProfilePhoto { get; set; }
-
     }
 }

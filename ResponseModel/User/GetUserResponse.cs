@@ -1,8 +1,6 @@
-using Data;
-
 public class GetUserResponse : ResponseBase
 {
-    public ApplicationUser User { get; set; }
-    public Employee? Employee { get; set; }
-    public Member? Member { get; set; }
+    public UserDto User { get; set; }
+    public EmployeeDto? Employee { get; set; }
+    public MemberDto? Member { get; set; }
 }

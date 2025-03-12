@@ -26,4 +26,11 @@ public class MemberController : ControllerBase
         return Ok(member);
     }
 
+    [HttpGet("getallbymembershipid/{membershipId}")]
+    public async Task<IActionResult> GetAllByMembershipId(int membershipId)
+    {
+        var membersResponse = await _memberService.GetAllByMembershipIdAsync(membershipId);
+        return Ok(membersResponse);
+    }
+
 }

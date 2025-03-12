@@ -27,7 +27,6 @@ public class UserController : ControllerBase
     [HttpGet("authorizeuser")]
     public async Task<IActionResult> AuthorizeUser()
     {
-        Console.WriteLine("\n\nAuthorize endpoint Hit!\n\n");
         var result = await _userService.AuthorizeUserAsync();
         return Ok(result);
     }
@@ -71,11 +70,11 @@ public class UserController : ControllerBase
     }
 
     [Authorize]
-    [HttpPatch("update/{id}")]
-    public async Task<IActionResult> UpdateUser([FromBody] SignUpDto signUpDto, string id)
+    [HttpPatch("update/{userId}")]
+    public async Task<IActionResult> UpdateUser([FromBody] SignUpDto signUpDto, string userId)
     {
-        Console.WriteLine($"\nUserResult\n{JsonConvert.SerializeObject(signUpDto)}\nAnd id: {id}\n");
-        var result = await _userService.UpdateAsync(signUpDto, id);
+        Console.WriteLine("\n\nEndpoint Hit!!!\n\n");
+        var result = await _userService.UpdateAsync(signUpDto, userId);
         return Ok(result);
     }
 

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 
 [ApiController]
@@ -16,6 +17,7 @@ public class MembershipController : ControllerBase
     [HttpPost("create")]
     public async Task<IActionResult> CreateMembership([FromBody] MembershipDto membershipDto)
     {
+        Console.WriteLine($"\n\n\tmembershipDto\n{JsonConvert.SerializeObject(membershipDto, Formatting.Indented)}\n\n");
         var message =  await _membershipService.CreateAsync(membershipDto);
         return Ok(message);
     }
@@ -30,8 +32,17 @@ public class MembershipController : ControllerBase
     [HttpGet("getbyid/{id}")]
     public async Task<IActionResult> GetMembershipById(int id)
     {
-        var membership =  await _membershipService.GetByIdAsync(id);
-        return Ok(membership);
+        var membershipResponse =  await _membershipService.GetByIdAsync(id);
+        return Ok(membershipResponse);
+    }
+
+    [Authorize]
+    [HttpGet("toggleactivation/{id}")]
+    public async Task<IActionResult> ToggleMembershipActivationById(int id)
+    {
+        Console.WriteLine($"\n\nid from endpoint: {id}\n\n");
+        var membersipDeactivationResponse = await _membershipService.ToggleActivationByIdAsync(id);
+        return Ok(membersipDeactivationResponse);
     }
 
     [HttpPatch("update/{id}")]

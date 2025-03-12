@@ -16,9 +16,8 @@ public class EmployeeController : ControllerBase
     [HttpGet("getall")]
     public async Task<IActionResult> GetAllEmployees()
     {
-        var employees = await _employeeService.GetAllAsync();
-        if (!employees.IsSuccess) return BadRequest(employees);
-        return Ok(employees);
+        var employeesResponse = await _employeeService.GetAllAsync();
+        return Ok(employeesResponse);
     }
 
     [HttpGet("getall/{position}")]

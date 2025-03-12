@@ -8,11 +8,13 @@ public class EmployeeService : IEmployeeService
     private readonly AppDbContext _context;
     private readonly IMapper _mapper;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    public EmployeeService(AppDbContext context, IMapper mapper, IHttpContextAccessor httpContextAccessor)
+    private readonly IServiceProvider _serviceProvider;
+    public EmployeeService(AppDbContext context, IMapper mapper, IHttpContextAccessor httpContextAccessor, IServiceProvider serviceProvider)
     {
         _context = context;
         _mapper = mapper;
         _httpContextAccessor = httpContextAccessor;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task<GetEmployeeResponse> CreateAsync(EmployeeDomain employeeDomain)
@@ -25,8 +27,9 @@ public class EmployeeService : IEmployeeService
                 Salary = employeeDomain.Salary
             };
             _context.Employee.Add(employee);
+            var employeeDto = _mapper.Map<Employee, EmployeeDto>(employee);
             await _context.SaveChangesAsync();
-            return new GetEmployeeResponse { IsSuccess = true, Message = "Employee signed up.", Employee = employee };
+            return new GetEmployeeResponse { IsSuccess = true, Message = "Employee signed up.", Employee = employeeDto };
         } catch (Exception e) {
             return new GetEmployeeResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
         }
@@ -36,9 +39,10 @@ public class EmployeeService : IEmployeeService
     {
         try {
             var employees = await _context.Employee
-            .Include(e => e.User)
-            .ToListAsync();
-            return new GetEmployeesResponse { IsSuccess = true, Message = "Employees read.", Employees = employees };
+                .Include(e => e.User)
+                .ToListAsync();
+            var employeeDto = _mapper.Map<List<Employee>, List<EmployeeDto>>(employees);
+            return new GetEmployeesResponse { IsSuccess = true, Message = "Employees read.", Employees = employeeDto };
         } catch (Exception e) {
             return new GetEmployeesResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
         }
@@ -51,10 +55,8 @@ public class EmployeeService : IEmployeeService
                 .Include(e => e.User)
                 .Where(e => e.Position == position)
                 .ToListAsync();
-            foreach (var employee in employees) {
-                employee.User.ProfilePhoto = $"{_httpContextAccessor.HttpContext.Request.Scheme}://{_httpContextAccessor.HttpContext.Request.Host}/{employee.User.ProfilePhotoPath}";
-            }
-            return new GetEmployeesResponse { IsSuccess = true, Message = "Employees read.", Employees = employees };
+            var employeeDto = _mapper.Map<List<Employee>, List<EmployeeDto>>(employees);
+            return new GetEmployeesResponse { IsSuccess = true, Message = "Employees read.", Employees = employeeDto };
         } catch (Exception e) {
             return new GetEmployeesResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
         }
@@ -67,29 +69,31 @@ public class EmployeeService : IEmployeeService
                 .Include(e => e.User)
                 .FirstOrDefaultAsync(employee => employee.Id == id);
             if (employee == null) return new GetEmployeeResponse { IsSuccess = false, Message = $"No employee associated with given userId." };
-            return new GetEmployeeResponse { IsSuccess = true, Message = "Employee read.", Employee = employee};
+            var employeeDto = _mapper.Map<Employee, EmployeeDto>(employee);
+            return new GetEmployeeResponse { IsSuccess = true, Message = "Employee read.", Employee = employeeDto};
         } catch (Exception e) {
             return new GetEmployeeResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };
         }
     }
 
-    public async Task<GetEmployeeResponse> GetByUserIdAsync (string id)
+    public async Task<GetEmployeeResponse> GetByUserIdAsync (string userId)
     {
         try {
             var employee = await _context.Employee
                 .Include(e => e.User)
-                .FirstOrDefaultAsync(employee => employee.UserId == id);
+                .FirstOrDefaultAsync(employee => employee.UserId == userId);
             if (employee == null) return new GetEmployeeResponse { IsSuccess = false, Message = "No employee associated with given UserId." };
-            return new GetEmployeeResponse { IsSuccess = true, Message = "Employee read.", Employee = employee};
+            var employeeDto = _mapper.Map<Employee, EmployeeDto>(employee);
+            return new GetEmployeeResponse { IsSuccess = true, Message = "Employee read.", Employee = employeeDto};
         } catch (Exception e) {
             return new GetEmployeeResponse { IsSuccess = false, Message = $"Exception --> {e.Message}" };
         }
     }
 
-    public async Task<ResponseBase> UpdateAsync(UserDomain userDomain, string id)
+    public async Task<ResponseBase> UpdateAsync(UserDomain userDomain, string userId)
     {
         try {
-            var employee = await _context.Employee.FirstOrDefaultAsync(employee => employee.UserId == id);
+            var employee = await _context.Employee.FirstOrDefaultAsync(employee => employee.UserId == userId);
             employee.Position = userDomain.Position;
             employee.Salary = (int)userDomain.Salary;
             await _context.SaveChangesAsync();

@@ -36,13 +36,9 @@ namespace Data
                 .HasForeignKey<Member>(m => m.UserId)
                 .IsRequired();
 
-            modelBuilder.Entity<ApplicationUser>()
-                .HasIndex(u => u.Id)
-                .IsUnique();
-
             modelBuilder.Entity<Subscription>()
                 .HasOne(s => s.Member)
-                .WithMany(m => m.Subscriptions)
+                .WithMany()
                 .HasForeignKey(s => s.MemberId);
             
             modelBuilder.Entity<Subscription>()

@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Data
 {
     public class  Subscription
@@ -11,7 +9,6 @@ namespace Data
         public string Status { get; set; }
 
         public int MemberId { get; set; }
-        [JsonIgnore]
         public Member Member { get; set; }
 
         public int MembershipId { get; set; }
