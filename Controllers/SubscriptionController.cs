@@ -14,16 +14,16 @@ public class SubscriptionController : ControllerBase
         _subscriptionService = subscriptionService;
     }
     
+    [Authorize(Roles = "Member")]
     [HttpPost("create/{membershipId}")]
     public async Task<IActionResult> CreateSubscription([FromBody] SubscriptionDto subscriptionDto, int membershipId)
     {
         subscriptionDto.MembershipId = membershipId;
-        Console.WriteLine($"\n\n\tsubsdto\n{JsonConvert.SerializeObject(subscriptionDto, Formatting.Indented)}\n\n");
         var result =  await _subscriptionService.CreateAsync(subscriptionDto);
         return Ok(result);
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpGet("getallbymemberid")]
     public async Task<IActionResult> GetAllSubscriptionsByMemberId()
     {
@@ -45,6 +45,7 @@ public class SubscriptionController : ControllerBase
         return Ok(message);
     }
 
+    [Authorize(Roles = "Member")]
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> DeleteSubscription(int id)
     {

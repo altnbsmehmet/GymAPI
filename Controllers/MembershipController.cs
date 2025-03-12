@@ -14,6 +14,7 @@ public class MembershipController : ControllerBase
         _membershipService = membershipService;
     }
     
+    [Authorize(Roles = "Admin")]
     [HttpPost("create")]
     public async Task<IActionResult> CreateMembership([FromBody] MembershipDto membershipDto)
     {
@@ -36,7 +37,7 @@ public class MembershipController : ControllerBase
         return Ok(membershipResponse);
     }
 
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [HttpGet("toggleactivation/{id}")]
     public async Task<IActionResult> ToggleMembershipActivationById(int id)
     {
@@ -45,6 +46,7 @@ public class MembershipController : ControllerBase
         return Ok(membersipDeactivationResponse);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpPatch("update/{id}")]
     public async Task<IActionResult> UpdateMembership([FromBody] MembershipDto membershipDto, int id)
     {
@@ -52,6 +54,7 @@ public class MembershipController : ControllerBase
         return Ok(message);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> DeleteMembership(int id)
     {
