@@ -7,6 +7,7 @@ using System.Text;
 using System.Security.Claims;
 using AutoMapper;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Options;
 
 
 public class UserService : IUserService
@@ -18,8 +19,9 @@ public class UserService : IUserService
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IConfiguration _config;
     private readonly IServiceProvider _serviceProvider;
+    private readonly JwtSettings _jwtSettings;
 
-    public UserService(AppDbContext context, IMapper mapper, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IHttpContextAccessor httpContextAccessor, IConfiguration config, IServiceProvider serviceProvider)
+    public UserService(AppDbContext context, IMapper mapper, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IHttpContextAccessor httpContextAccessor, IConfiguration config, IServiceProvider serviceProvider, IOptions<JwtSettings> jwtSettings)
     {
         _context = context;
         _mapper = mapper;
@@ -28,6 +30,7 @@ public class UserService : IUserService
         _httpContextAccessor = httpContextAccessor;
         _config = config;
         _serviceProvider = serviceProvider;
+        _jwtSettings = jwtSettings.Value;
     }
     public IEmployeeService GetEmployeeService()
     {
@@ -252,7 +255,7 @@ public class UserService : IUserService
 
     private string GenerateJwtToken(ApplicationUser user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>();
@@ -261,7 +264,7 @@ public class UserService : IUserService
             claims.Add(new Claim(JwtRegisteredClaimNames.Sub, user.Id));
 
         if (!string.IsNullOrEmpty(user.Id))
-        claims.Add(new Claim("user_id", user.Id));  // Yeni claim
+            claims.Add(new Claim("user_id", user.Id));
 
         if (!string.IsNullOrEmpty(user.UserName))
             claims.Add(new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName));
@@ -271,16 +274,13 @@ public class UserService : IUserService
 
         var roles = _userManager.GetRolesAsync(user).Result;
         foreach (var role in roles)
-        {
             claims.Add(new Claim(ClaimTypes.Role, role));
-        }
 
         claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())); // Unique Token ID>
 
-
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: _jwtSettings.Issuer,
+            audience: _jwtSettings.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(2), // Token expires in 2 hours
             signingCredentials: creds

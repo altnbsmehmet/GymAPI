@@ -12,7 +12,23 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 builder.WebHost.UseUrls("http://0.0.0.0:5410");
 
-// Add services
+var isDevelopment = builder.Environment.IsDevelopment();
+string GetConfigValue(string envVarName, string appSettingsKey){
+    var envValue = Environment.GetEnvironmentVariable(envVarName);
+    return !string.IsNullOrEmpty(envValue) ? envValue : builder.Configuration[appSettingsKey];
+}
+var frontendUrl = GetConfigValue("FRONTEND_URL", "FrontendUrl");
+var dbConnectionString = GetConfigValue("DB_CONNECTION_STRING", "ConnectionStrings:DefaultConnection");
+var jwtSecret = GetConfigValue("JWT_SECRET", "Jwt:Key");
+var jwtIssuer = GetConfigValue("JWT_ISSUER", "Jwt:Issuer");
+var jwtAudience = GetConfigValue("JWT_AUDIENCE", "Jwt:Audience");
+builder.Services.Configure<JwtSettings>(options =>
+{
+    options.Key = jwtSecret;
+    options.Issuer = jwtIssuer;
+    options.Audience = jwtAudience;
+});
+
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -25,7 +41,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString(builder.Configuration["DB_CONNECTION_STRING"])));
+    options.UseNpgsql(dbConnectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
@@ -35,8 +51,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always; // Use Secure cookies in production
-    options.Cookie.SameSite = SameSiteMode.None; // Important for cross-origin cookies
+    options.Cookie.SecurePolicy = isDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // Yerelde HTTP destekle
+    options.Cookie.SameSite = isDevelopment ? SameSiteMode.Lax : SameSiteMode.None; // Yerelde Lax, prod'da None
     options.Events.OnRedirectToLogin = context =>
     {
         context.Response.StatusCode = 401; // Unauthorized
@@ -58,10 +74,10 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JWT_ISSUER"],
-        ValidAudience = builder.Configuration["JWT_AUDIENCE"],
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(builder.Configuration["JWT_SECRET"])),
+            Encoding.UTF8.GetBytes(jwtSecret)),
     };
 
     // Cookie'den JWT'yi almak için:
@@ -84,8 +100,6 @@ builder.Services.AddAuthentication(options =>
         }
     };
 });
-
-var frontendUrl = builder.Configuration["FRONTEND_URL"];
 
 // CORS (Cross-Origin Resource Sharing) Configuration
 builder.Services.AddCors(options =>

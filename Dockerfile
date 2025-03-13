@@ -3,8 +3,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
 WORKDIR /app
 
 # Copy solution and project files
-COPY ["API.sln", "API/"]
-COPY ["API/API.csproj", "API/"]
+# Copy solution and project files
+COPY API.sln .
+COPY API/API.csproj API/
 
 WORKDIR /app/API
 
