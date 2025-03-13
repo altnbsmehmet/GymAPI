@@ -1,6 +1,6 @@
 # Step 1: Use the .NET SDK image to build the project
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build-env
-WORKDIR /app
+WORKDIR /app/API
 
 # Copy solution and project files
 # Copy solution and project files
