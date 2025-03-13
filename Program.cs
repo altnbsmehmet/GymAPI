@@ -9,6 +9,7 @@ using Microsoft.Extensions.FileProviders;
 using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEnvironmentVariables();
 builder.WebHost.UseUrls("http://0.0.0.0:5410");
 
 // Add services
@@ -84,14 +85,16 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+var frontendUrl = builder.Configuration["FRONTEND_URL"];
+
 // CORS (Cross-Origin Resource Sharing) Configuration
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder => builder
-        .SetIsOriginAllowed(_ => true)  // Replace with your frontend URL
+    options.AddPolicy("AllowFrontend", builder => builder
+        .WithOrigins(frontendUrl)  // Replace with your frontend URL
         .AllowAnyMethod()
         .AllowAnyHeader()
-        .AllowCredentials());  // Allows sending credentials (cookies, etc.)
+        .AllowCredentials());
 });
 
 builder.Services.AddAuthorization();
@@ -103,7 +106,7 @@ app.UseStaticFiles();
 app.UseRouting();
 
 // Apply CORS policy
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();  // Authentication middleware
 app.UseAuthorization();   // Authorization middleware
