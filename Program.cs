@@ -9,6 +9,7 @@ using Microsoft.Extensions.FileProviders;
 using Newtonsoft.Json;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.WebHost.UseUrls("http://0.0.0.0:5410");
 
 // Add services
 builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -87,7 +88,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder => builder
-        .WithOrigins("http://localhost:5420")  // Replace with your frontend URL
+        .SetIsOriginAllowed(_ => true)  // Replace with your frontend URL
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials());  // Allows sending credentials (cookies, etc.)

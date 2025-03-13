@@ -23,7 +23,7 @@ public class SubscriptionController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Member")]
     [HttpGet("getallbymemberid")]
     public async Task<IActionResult> GetAllSubscriptionsByMemberId()
     {
