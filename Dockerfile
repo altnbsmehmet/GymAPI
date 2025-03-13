@@ -4,7 +4,8 @@ WORKDIR /app
 
 # Copy solution and project files
 # Copy solution and project files
-COPY . .
+COPY API.sln .
+COPY API.csproj .
 
 WORKDIR /app/API
 
