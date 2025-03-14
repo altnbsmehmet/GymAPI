@@ -337,6 +337,8 @@ public class UserService : IUserService
 
         if (string.IsNullOrEmpty(token)) token = httpContext.Request.Cookies["jwt"];
 
+        Console.WriteLine($"\n\n[DEBUG] Gelen Jwt Token: {token}\n\n");
+
         return token;
     }
 
