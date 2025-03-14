@@ -12,21 +12,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 builder.WebHost.UseUrls("http://0.0.0.0:5410");
 
-var isDevelopment = builder.Environment.IsDevelopment();
-string GetConfigValue(string envVarName, string appSettingsKey){
-    var envValue = Environment.GetEnvironmentVariable(envVarName);
-    return !string.IsNullOrEmpty(envValue) ? envValue : builder.Configuration[appSettingsKey];
-}
-var frontendUrl = GetConfigValue("FRONTEND_URL", "FrontendUrl");
-var dbConnectionString = GetConfigValue("DB_CONNECTION_STRING", "ConnectionStrings:DefaultConnection");
-var jwtSecret = GetConfigValue("JWT_SECRET", "Jwt:Key");
-var jwtIssuer = GetConfigValue("JWT_ISSUER", "Jwt:Issuer");
-var jwtAudience = GetConfigValue("JWT_AUDIENCE", "Jwt:Audience");
+var _isDevelopment = builder.Environment.IsDevelopment();
+var _frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? builder.Configuration["FrontendUrl"];
+var _dbConnectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
+var _jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? builder.Configuration["Jwt:Key"];
+var _jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? builder.Configuration["Jwt:Issuer"];
+var _jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? builder.Configuration["Jwt:Audience"];
+Console.WriteLine($"\n\n\tEnvironmental Variables\nIsDevelopment --> {_isDevelopment}\nFrontendUrl --> {_frontendUrl}\nDbConnectionString --> {_dbConnectionString}\nJwtSecret --> {_jwtSecret}\nJwtIssuer --> {_jwtIssuer}\nJwtAudience --> {_jwtAudience}\n\n");
+
 builder.Services.Configure<JwtSettings>(options =>
 {
-    options.Key = jwtSecret;
-    options.Issuer = jwtIssuer;
-    options.Audience = jwtAudience;
+    options.Key = _jwtSecret;
+    options.Issuer = _jwtIssuer;
+    options.Audience = _jwtAudience;
 });
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
@@ -40,9 +38,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddHttpContextAccessor();
 
-Console.WriteLine($"\n\nDB Connection String: {dbConnectionString}\n\n");
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(dbConnectionString));
+    options.UseNpgsql(_dbConnectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
@@ -52,8 +49,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = isDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // Yerelde HTTP destekle
-    options.Cookie.SameSite = isDevelopment ? SameSiteMode.Lax : SameSiteMode.None; // Yerelde Lax, prod'da None
+    options.Cookie.SecurePolicy = _isDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // Yerelde HTTP destekle
+    options.Cookie.SameSite = _isDevelopment ? SameSiteMode.Lax : SameSiteMode.Strict; // Yerelde Lax, production'da None
     options.Events.OnRedirectToLogin = context =>
     {
         context.Response.StatusCode = 401; // Unauthorized
@@ -75,10 +72,10 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtIssuer,
-        ValidAudience = jwtAudience,
+        ValidIssuer = _jwtIssuer,
+        ValidAudience = _jwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(jwtSecret)),
+            Encoding.UTF8.GetBytes(_jwtSecret)),
     };
 
     // Cookie'den JWT'yi almak için:
@@ -106,7 +103,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", builder => builder
-        .WithOrigins(frontendUrl)  // Replace with your frontend URL
+        .WithOrigins(_frontendUrl)  // Replace with your frontend URL
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials());
