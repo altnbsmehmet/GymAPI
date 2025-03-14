@@ -50,7 +50,7 @@ builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = _isDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // Yerelde HTTP destekle
-    options.Cookie.SameSite = _isDevelopment ? SameSiteMode.Lax : SameSiteMode.Strict; // Yerelde Lax, production'da None
+    options.Cookie.SameSite = _isDevelopment ? SameSiteMode.Lax : SameSiteMode.Lax; // Yerelde Lax, production'da None
     options.Events.OnRedirectToLogin = context =>
     {
         context.Response.StatusCode = 401; // Unauthorized
