@@ -71,16 +71,16 @@ public class UserService : IUserService
     public async Task<UserAuthorizationResponse> AuthorizeUserAsync()
     {
         var token = GetTokenFromRequest();
+        Console.WriteLine($"\n\n\t[DEBUG] Jwt Token\n{token}\n\n");
         if (string.IsNullOrEmpty(token))return new UserAuthorizationResponse { IsSuccess = false, Message = "Token is missing" };
-        //Console.WriteLine($"\n\nToken\n{token}\n");
 
         var principal = GetUserClaimsFormToken(token);
+        Console.WriteLine($"\n\n\t[DEBUG] Principal\n{JsonConvert.SerializeObject(principal, Formatting.Indented)}\n\n");
         if (principal == null) return new UserAuthorizationResponse { IsSuccess = false, Message = "Invalid token" };
-        //Console.WriteLine($"\n\tPrincipal\n{JsonConvert.SerializeObject(principal, Formatting.Indented)}\n");
 
         var user =  await _context.Users.FindAsync(principal.UserId);
+        Console.WriteLine($"\n\n\t[DEBUG] tUserResult\n{JsonConvert.SerializeObject(user, Formatting.Indented)}\n\n");
         if (user == null) new GetUserResponse { IsSuccess = false, Message = "User coudln't read." };
-        //Console.WriteLine($"\n\tUserResult\n{JsonConvert.SerializeObject(userResult, Formatting.Indented)}\n\n");
 
         var roles = await _userManager.GetRolesAsync(user);
         var role = roles.FirstOrDefault();
@@ -293,16 +293,15 @@ public class UserService : IUserService
     {
         try {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_config["Jwt:Key"]);
+            var key = Encoding.UTF8.GetBytes(_jwtSettings.Key);
 
-            var parameters = new TokenValidationParameters
-            {
+            var parameters = new TokenValidationParameters {
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = _config["Jwt:Issuer"],
-                ValidAudience = _config["Jwt:Audience"],
+                ValidIssuer = _jwtSettings.Issuer,
+                ValidAudience = _jwtSettings.Audience,
                 IssuerSigningKey = new SymmetricSecurityKey(key)
             };
 
@@ -323,8 +322,7 @@ public class UserService : IUserService
             }
 
             return null; // Token geçersiz
-        }
-        catch {
+        } catch {
             return null; // Hata durumunda null döndür
         }
     }
