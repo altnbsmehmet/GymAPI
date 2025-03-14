@@ -40,6 +40,7 @@ builder.Services.AddControllers();
 
 builder.Services.AddHttpContextAccessor();
 
+Console.WriteLine($"\n\nDB Connection String: {dbConnectionString}\n\n");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(dbConnectionString));
 
