@@ -17,20 +17,16 @@ public class UserService : IUserService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly IConfiguration _config;
     private readonly IServiceProvider _serviceProvider;
-    private readonly JwtSettings _jwtSettings;
 
-    public UserService(AppDbContext context, IMapper mapper, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IHttpContextAccessor httpContextAccessor, IConfiguration config, IServiceProvider serviceProvider, IOptions<JwtSettings> jwtSettings)
+    public UserService(AppDbContext context, IMapper mapper, UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IHttpContextAccessor httpContextAccessor, IServiceProvider serviceProvider)
     {
         _context = context;
         _mapper = mapper;
         _userManager = userManager;
         _signInManager = signInManager;
         _httpContextAccessor = httpContextAccessor;
-        _config = config;
         _serviceProvider = serviceProvider;
-        _jwtSettings = jwtSettings.Value;
     }
     public IEmployeeService GetEmployeeService()
     {
@@ -71,15 +67,12 @@ public class UserService : IUserService
     public async Task<UserAuthorizationResponse> AuthorizeUserAsync()
     {
         var token = GetTokenFromRequest();
-        Console.WriteLine($"\n\n\t[DEBUG] Jwt Token\n{token}\n\n");
         if (string.IsNullOrEmpty(token))return new UserAuthorizationResponse { IsSuccess = false, Message = "Token is missing" };
 
         var principal = GetUserClaimsFormToken(token);
-        Console.WriteLine($"\n\n\t[DEBUG] Principal\n{JsonConvert.SerializeObject(principal, Formatting.Indented)}\n\n");
         if (principal == null) return new UserAuthorizationResponse { IsSuccess = false, Message = "Invalid token" };
 
         var user =  await _context.Users.FindAsync(principal.UserId);
-        Console.WriteLine($"\n\n\t[DEBUG] tUserResult\n{JsonConvert.SerializeObject(user, Formatting.Indented)}\n\n");
         if (user == null) new GetUserResponse { IsSuccess = false, Message = "User coudln't read." };
 
         var roles = await _userManager.GetRolesAsync(user);
@@ -111,6 +104,10 @@ public class UserService : IUserService
 
     public async Task<ResponseBase> SignUpAsync(SignUpDto signUpDto)
     {
+        if (signUpDto.Role != "Employee" && signUpDto.Role != "Member") {
+            return new ResponseBase { IsSuccess = false, Message = "Signup is only allowed for Employee and Member roles." };
+        }
+
         var _employeeService = GetEmployeeService();
         var _memberService = GetMemberService();
 
@@ -151,17 +148,22 @@ public class UserService : IUserService
                 Position = userDomain.Position,
                 Salary = (int)userDomain.Salary
             });
+            if (!employeeResult.IsSuccess) {
+                await _userManager.DeleteAsync(user);
+                return new ResponseBase { IsSuccess = false, Message = "Error creating Employee." };
+            }
             return new ResponseBase { IsSuccess = true, Message = "Employee signed up." };
         } else if (userDomain.Role == "Member") {
             var memberResult = await _memberService.CreateAsync(new MemberDomain {
                 UserId = user.Id
             });
+            if (!memberResult.IsSuccess) {
+                await _userManager.DeleteAsync(user);
+                return new ResponseBase { IsSuccess = false, Message = "Error creating Member." };
+            }
             return new ResponseBase { IsSuccess = true, Message = "Member signed up." };
-        } else if (userDomain.Role == "Admin") {
-            return new ResponseBase { IsSuccess = true, Message = "Admin signed up." };
         }
-
-        return new ResponseBase { IsSuccess = false, Message = "Wrong role." };
+        return new ResponseBase { IsSuccess = false, Message = "Unexpected Errorr." };
     }
 
     public async Task<ResponseBase> SignOutAsync()
@@ -255,7 +257,7 @@ public class UserService : IUserService
 
     private string GenerateJwtToken(ApplicationUser user)
     {
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Key));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(EnvironmentVariables.JwtSecret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var claims = new List<Claim>();
@@ -279,8 +281,8 @@ public class UserService : IUserService
         claims.Add(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())); // Unique Token ID>
 
         var token = new JwtSecurityToken(
-            issuer: _jwtSettings.Issuer,
-            audience: _jwtSettings.Audience,
+            issuer: EnvironmentVariables.JwtIssuer,
+            audience: EnvironmentVariables.JwtAudience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(2), // Token expires in 2 hours
             signingCredentials: creds
@@ -293,15 +295,15 @@ public class UserService : IUserService
     {
         try {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(_jwtSettings.Key);
+            var key = Encoding.UTF8.GetBytes(EnvironmentVariables.JwtSecret);
 
             var parameters = new TokenValidationParameters {
                 ValidateIssuer = true,
                 ValidateAudience = true,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = _jwtSettings.Issuer,
-                ValidAudience = _jwtSettings.Audience,
+                ValidIssuer = EnvironmentVariables.JwtIssuer,
+                ValidAudience = EnvironmentVariables.JwtAudience,
                 IssuerSigningKey = new SymmetricSecurityKey(key)
             };
 
@@ -334,8 +336,6 @@ public class UserService : IUserService
         var token = httpContext.Request.Headers["Authorization"].FirstOrDefault()?.Split(" ").Last();
 
         if (string.IsNullOrEmpty(token)) token = httpContext.Request.Cookies["jwt"];
-
-        Console.WriteLine($"\n\n[DEBUG] Gelen Jwt Token: {token}\n\n");
 
         return token;
     }

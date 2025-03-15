@@ -26,12 +26,12 @@ public class MappingProfile : Profile
         CreateMap<ApplicationUser, UserDto>()
             .ForMember(dest => dest.ProfilePhoto, 
                 opt => opt.MapFrom(src => src.ProfilePhotoPath != null 
-                    ? $"http://localhost:5410/{src.ProfilePhotoPath}" 
+                    ? $"{EnvironmentVariables.ApiDomainUrl}{src.ProfilePhotoPath}" 
                     : null));
         CreateMap<UserDto, ApplicationUser>()
             .ForMember(dest => dest.ProfilePhoto, 
                 opt => opt.MapFrom(src => src.ProfilePhotoPath != null 
-                    ? $"http://localhost:5410/{src.ProfilePhotoPath}" 
+                    ? $"{EnvironmentVariables.ApiDomainUrl}{src.ProfilePhotoPath}" 
                     : null));
 
         CreateMap<Employee, EmployeeDto>();

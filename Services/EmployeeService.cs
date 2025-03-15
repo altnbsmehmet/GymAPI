@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Data;
 using AutoMapper;
+using Newtonsoft.Json;
 
 
 public class EmployeeService : IEmployeeService

@@ -33,7 +33,7 @@ public class MembershipService : IMembershipService
             };
             await _context.Membership.AddAsync(membership);
             await _context.SaveChangesAsync();
-            return new ResponseBase { IsSuccess = true, Message = $"Membership with type {membership.Type} with duration {membership.Duration} and with price {membership.Price} successfully created." };
+            return new ResponseBase { IsSuccess = true, Message = $"Membership with type {membership.Type} with duration {membership.Duration} and with price {membership.Price} created." };
         } catch (Exception e) {
             var innerMessage = e.InnerException?.Message ?? "No inner exception";
             return new ResponseBase { IsSuccess = false, Message = $"Error --> {e.Message}, InnerException --> {innerMessage}" };

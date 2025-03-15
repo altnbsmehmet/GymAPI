@@ -12,20 +12,21 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEnvironmentVariables();
 builder.WebHost.UseUrls("http://0.0.0.0:5410");
 
-var _isDevelopment = builder.Environment.IsDevelopment();
-var _frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? builder.Configuration["FrontendUrl"];
-var _dbConnectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ?? builder.Configuration["ConnectionStrings:DefaultConnection"];
-var _jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? builder.Configuration["Jwt:Key"];
-var _jwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? builder.Configuration["Jwt:Issuer"];
-var _jwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? builder.Configuration["Jwt:Audience"];
-Console.WriteLine($"\n\n\tEnvironmental Variables\nIsDevelopment --> {_isDevelopment}\nFrontendUrl --> {_frontendUrl}\nDbConnectionString --> {_dbConnectionString}\nJwtSecret --> {_jwtSecret}\nJwtIssuer --> {_jwtIssuer}\nJwtAudience --> {_jwtAudience}\n\n");
-
-builder.Services.Configure<JwtSettings>(options =>
-{
-    options.Key = _jwtSecret;
-    options.Issuer = _jwtIssuer;
-    options.Audience = _jwtAudience;
-});
+EnvironmentVariables.IsDevelopment = builder.Environment.IsDevelopment();
+EnvironmentVariables.ApiDomainUrl = Environment.GetEnvironmentVariable("API_DOMAIN_URL") ?? builder.Configuration["ApiDomainUrl"] ?? "";
+EnvironmentVariables.FrontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? builder.Configuration["FrontendUrl"] ?? "";
+EnvironmentVariables.DbConnectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ?? builder.Configuration["ConnectionStrings:DefaultConnection"] ?? "";
+EnvironmentVariables.JwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? builder.Configuration["Jwt:Key"] ?? "";
+EnvironmentVariables.JwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? builder.Configuration["Jwt:Issuer"] ?? "";
+EnvironmentVariables.JwtAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE") ?? builder.Configuration["Jwt:Audience"] ?? "";
+Console.WriteLine($"\n\n\tEnvironmental Variables\n" +
+    $"IsDevelopment --> {EnvironmentVariables.IsDevelopment}\n" +
+    $"ApiUrl --> {EnvironmentVariables.ApiDomainUrl}\n" +
+    $"FrontendUrl --> {EnvironmentVariables.FrontendUrl}\n" +
+    $"DbConnectionString --> {EnvironmentVariables.DbConnectionString}\n" +
+    $"JwtSecret --> {EnvironmentVariables.JwtSecret}\n" +
+    $"JwtIssuer --> {EnvironmentVariables.JwtIssuer}\n" +
+    $"JwtAudience --> {EnvironmentVariables.JwtAudience}\n\n");
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
@@ -39,7 +40,7 @@ builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql(_dbConnectionString));
+    options.UseNpgsql(EnvironmentVariables.DbConnectionString));
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
@@ -49,8 +50,8 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = _isDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // Yerelde HTTP destekle
-    options.Cookie.SameSite = _isDevelopment ? SameSiteMode.Lax : SameSiteMode.Lax; // Yerelde Lax, production'da None
+    options.Cookie.SecurePolicy = EnvironmentVariables.IsDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // Yerelde HTTP destekle
+    options.Cookie.SameSite = EnvironmentVariables.IsDevelopment ? SameSiteMode.Lax : SameSiteMode.Lax; // Yerelde Lax, production'da None
     options.Events.OnRedirectToLogin = context =>
     {
         context.Response.StatusCode = 401; // Unauthorized
@@ -72,10 +73,10 @@ builder.Services.AddAuthentication(options =>
         ValidateAudience = true,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
-        ValidIssuer = _jwtIssuer,
-        ValidAudience = _jwtAudience,
+        ValidIssuer = EnvironmentVariables.JwtIssuer,
+        ValidAudience = EnvironmentVariables.JwtAudience,
         IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(_jwtSecret)),
+            Encoding.UTF8.GetBytes(EnvironmentVariables.JwtSecret)),
     };
 
     // Cookie'den JWT'yi almak için:
@@ -103,7 +104,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", builder => builder
-        .WithOrigins(_frontendUrl)  // Replace with your frontend URL
+        .WithOrigins(EnvironmentVariables.FrontendUrl)  // Replace with your frontend URL
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials());
