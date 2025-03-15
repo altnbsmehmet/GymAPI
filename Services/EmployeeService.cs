@@ -43,7 +43,6 @@ public class EmployeeService : IEmployeeService
                 .Include(e => e.User)
                 .ToListAsync();
             var employeeDto = _mapper.Map<List<Employee>, List<EmployeeDto>>(employees);
-            Console.WriteLine($"\n\n\tDebug\n{JsonConvert.SerializeObject(employeeDto, Formatting.Indented)}\n\n");
             return new GetEmployeesResponse { IsSuccess = true, Message = "Employees read.", Employees = employeeDto };
         } catch (Exception e) {
             return new GetEmployeesResponse { IsSuccess = false, Message = $"Error --> {e.Message}" };
