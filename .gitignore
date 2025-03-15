@@ -48,3 +48,5 @@ appsettings.json
 appsettings.Development.json
 Properties/
 *.code-workspace
+Uploads/ProfilePhoto*
+!Uploads/ProfilePhoto.gitignore
