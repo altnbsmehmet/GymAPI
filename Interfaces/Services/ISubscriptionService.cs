@@ -1,5 +1,3 @@
-using Data;
-
 public interface ISubscriptionService
 {
     Task<ResponseBase> CreateAsync(SubscriptionDto subscriptionDto);
@@ -8,7 +6,7 @@ public interface ISubscriptionService
 
     Task<GetSubscriptionResponse> GetByIdAsync(int id);
 
-    Task<GetSubscriptionsResponse> GetAllByMembershipId(int membershipId);
+    Task<GetSubscriptionsResponse> GetAllByMembershipIdAsync(int membershipId);
 
     Task<ResponseBase> UpdateAsync(int id, SubscriptionDto subscriptionInfo);
 

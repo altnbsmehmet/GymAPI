@@ -7,7 +7,6 @@ using System.Text;
 using System.Security.Claims;
 using AutoMapper;
 using Newtonsoft.Json;
-using Microsoft.Extensions.Options;
 
 
 public class UserService : IUserService
@@ -239,7 +238,7 @@ public class UserService : IUserService
         }
     }
 
-    public async Task<ResponseBase> DeleteAsnyc(string id)
+    public async Task<ResponseBase> DeleteAsync(string id)
     {
         var _employeeService = GetEmployeeService();
         var _memberService = GetMemberService();

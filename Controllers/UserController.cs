@@ -82,7 +82,7 @@ public class UserController : ControllerBase
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> DeleteUser(string id)
     {
-        var result = await _userService.DeleteAsnyc(id);
+        var result = await _userService.DeleteAsync(id);
         return Ok(result);
     }
 

@@ -1,7 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Data;
 using AutoMapper;
-using System.Diagnostics;
 
 
 public class SubscriptionService : ISubscriptionService
@@ -75,7 +74,7 @@ public class SubscriptionService : ISubscriptionService
         }
     }
 
-    public async Task<GetSubscriptionsResponse> GetAllByMembershipId(int membershipId)
+    public async Task<GetSubscriptionsResponse> GetAllByMembershipIdAsync(int membershipId)
     {
         try {
             var subscriptions = await _context.Subscription

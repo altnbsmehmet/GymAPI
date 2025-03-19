@@ -1,5 +1,3 @@
-using Data;
-
 public interface IMemberService
 {
     Task<GetMemberResponse> CreateAsync(MemberDomain memberDomain);

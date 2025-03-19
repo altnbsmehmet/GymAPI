@@ -49,10 +49,6 @@ appsettings.Development.json
 Properties/
 *.code-workspace
 
-# Ignore contents of Uploads/ProfilePhoto but keep the folder
-Uploads/ProfilePhoto/*
-!Uploads/ProfilePhoto/.keep
-
 # Ignore contents of wwwroot/Uploads/ProfilePhoto but keep the folder
 wwwroot/Uploads/ProfilePhoto/*
 !wwwroot/Uploads/ProfilePhoto/.keep

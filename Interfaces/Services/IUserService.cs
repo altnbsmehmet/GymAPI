@@ -1,5 +1,3 @@
-using Data;
-
 public interface IUserService
 {
     Task<GetUserResponse> GetCurrentUserAsync();
@@ -17,5 +15,5 @@ public interface IUserService
 
     Task<ResponseBase> UpdateAsync(SignUpDto userInfo, string id);
 
-    Task<ResponseBase> DeleteAsnyc(string id);
+    Task<ResponseBase> DeleteAsync(string id);
 }

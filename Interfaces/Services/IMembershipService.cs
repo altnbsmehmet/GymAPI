@@ -1,5 +1,3 @@
-using Data;
-
 public interface IMembershipService
 {
     Task<ResponseBase> CreateAsync(MembershipDto membershipDto);
