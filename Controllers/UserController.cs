@@ -15,6 +15,13 @@ public class UserController : ControllerBase
         _userService = userService;
     }
 
+    [HttpGet("test")]
+    public async Task<IActionResult> Test()
+    {
+        var user = await _userService.Test();
+        return Ok(user);
+    }
+
     [Authorize]
     [HttpGet("getcurrentuser")]
     public async Task<IActionResult> GetCurrentUser()

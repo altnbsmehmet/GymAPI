@@ -1,6 +1,9 @@
 public interface IUserService
 {
+    Task<ResponseBase> Test();
+
     Task<GetUserResponse> GetCurrentUserAsync();
+
     Task<UserAuthorizationResponse> AuthorizeUserAsync();
 
     Task<SignInResponse> SignInAsync(SignInDto signInInfo);

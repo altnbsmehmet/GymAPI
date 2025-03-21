@@ -121,6 +121,8 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();  // Authentication middleware
 app.UseAuthorization();   // Authorization middleware
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
 app.MapControllers();
 
 app.Run();
