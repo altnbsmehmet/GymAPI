@@ -182,7 +182,14 @@ public class UserService : IUserService
         var user =  await _context.Users.FindAsync(userId);
         var userDto = _mapper.Map<ApplicationUser, UserDto>(user);
         if (user == null) new GetUserResponse { IsSuccess = false, Message = "User coudln't read." };
-        return new GetUserResponse { IsSuccess = true, Message = "User read.", User = userDto };
+        if (user.Role == "Employee") {
+
+            return new GetUserResponse { IsSuccess = true, Message = "User read.", User = userDto };
+        } else if (user.Role == "Member") {
+
+            return new GetUserResponse { IsSuccess = true, Message = "User read.", User = userDto };
+        }
+        return new GetUserResponse { IsSuccess = false, Message = "User doesn't have a valid role." };
     }
 
     public async Task<GetUserResponse> GetByUserNameAsync(string userName)

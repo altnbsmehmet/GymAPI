@@ -4,14 +4,18 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Configuration.AddEnvironmentVariables();
+
 builder.WebHost.UseUrls("http://0.0.0.0:5410");
 
 EnvironmentVariables.IsDevelopment = builder.Environment.IsDevelopment();
 EnvironmentVariables.ApiDomainUrl = Environment.GetEnvironmentVariable("API_DOMAIN_URL") ?? builder.Configuration["ApiDomainUrl"] ?? "";
 EnvironmentVariables.FrontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? builder.Configuration["FrontendUrl"] ?? "";
+EnvironmentVariables.SeqUrl = Environment.GetEnvironmentVariable("SEQ_URL") ?? builder.Configuration["SeqUrl"] ?? "";
 EnvironmentVariables.DbConnectionString = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ?? builder.Configuration["ConnectionStrings:DefaultConnection"] ?? "";
 EnvironmentVariables.JwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? builder.Configuration["Jwt:Key"] ?? "";
 EnvironmentVariables.JwtIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER") ?? builder.Configuration["Jwt:Issuer"] ?? "";
@@ -20,10 +24,17 @@ Console.WriteLine($"\n\n\tEnvironmental Variables\n" +
     $"IsDevelopment --> {EnvironmentVariables.IsDevelopment}\n" +
     $"ApiUrl --> {EnvironmentVariables.ApiDomainUrl}\n" +
     $"FrontendUrl --> {EnvironmentVariables.FrontendUrl}\n" +
+    $"SeqUrl --> {EnvironmentVariables.SeqUrl}\n" +
     $"DbConnectionString --> {EnvironmentVariables.DbConnectionString}\n" +
     $"JwtSecret --> {EnvironmentVariables.JwtSecret}\n" +
     $"JwtIssuer --> {EnvironmentVariables.JwtIssuer}\n" +
     $"JwtAudience --> {EnvironmentVariables.JwtAudience}\n\n");
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.Seq(EnvironmentVariables.SeqUrl)
+    .Enrich.FromLogContext()
+    .CreateLogger();
 
 builder.Services.AddAutoMapper(typeof(MappingProfile));
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
@@ -43,20 +54,20 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddDefaultTokenProviders();
 
-// Cookie settings (for cookie authentication)
+// cookie settings
 builder.Services.ConfigureApplicationCookie(options =>
 {
     options.Cookie.HttpOnly = true;
-    options.Cookie.SecurePolicy = EnvironmentVariables.IsDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // Yerelde HTTP destekle
-    options.Cookie.SameSite = EnvironmentVariables.IsDevelopment ? SameSiteMode.Lax : SameSiteMode.Lax; // Yerelde Lax, production'da None
+    options.Cookie.SecurePolicy = EnvironmentVariables.IsDevelopment ? CookieSecurePolicy.None : CookieSecurePolicy.Always; // support http in local
+    options.Cookie.SameSite = EnvironmentVariables.IsDevelopment ? SameSiteMode.Lax : SameSiteMode.Lax; // Lax in local, None in production
     options.Events.OnRedirectToLogin = context =>
     {
-        context.Response.StatusCode = 401; // Unauthorized
+        context.Response.StatusCode = 401; // 401 means unauthorized
         return Task.CompletedTask;
     };
 });
 
-// JWT Authentication
+// jwt authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -76,16 +87,16 @@ builder.Services.AddAuthentication(options =>
             Encoding.UTF8.GetBytes(EnvironmentVariables.JwtSecret)),
     };
 
-    // Cookie'den JWT'yi almak için:
+    // to get jwt from cookie
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
         {
-            // Cookie'den JWT'yi al
+            // taking jwt from cookie
             var jwt = context.HttpContext.Request.Cookies["jwt"];
             if (!string.IsNullOrEmpty(jwt))
             {
-                context.Token = jwt;  // Cookie'deki token'ı alıp, context'e atıyoruz
+                context.Token = jwt;
             }
             return Task.CompletedTask;
         },
@@ -97,11 +108,10 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// CORS (Cross-Origin Resource Sharing) Configuration
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", builder => builder
-        .WithOrigins(EnvironmentVariables.FrontendUrl)  // Replace with your frontend URL
+        .WithOrigins(EnvironmentVariables.FrontendUrl)
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials());
@@ -109,17 +119,20 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddAuthorization();
 
+// Seq Testing
+Log.Information("Test Information.");
+Log.Warning("Test Warning.");
+Log.Error("Test Error.");
+
 var app = builder.Build();
 
-// Static file and routing setup
 app.UseStaticFiles();
 app.UseRouting();
 
-// Apply CORS policy
 app.UseCors("AllowFrontend");
 
-app.UseAuthentication();  // Authentication middleware
-app.UseAuthorization();   // Authorization middleware
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 

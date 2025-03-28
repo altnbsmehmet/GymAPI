@@ -18,8 +18,7 @@ public class UserController : ControllerBase
     [HttpGet("test")]
     public async Task<IActionResult> Test()
     {
-        var user = await _userService.Test();
-        return Ok(user);
+        throw new Exception("This is a test exception.");
     }
 
     [Authorize]
@@ -30,7 +29,6 @@ public class UserController : ControllerBase
         return Ok(user);
     }
 
-    [Authorize]
     [HttpGet("authorizeuser")]
     public async Task<IActionResult> AuthorizeUser()
     {
@@ -69,6 +67,7 @@ public class UserController : ControllerBase
         return Ok(users);
     }
 
+    [Authorize(Roles = "Admin")]
     [HttpGet("getbyid/{id}")]
     public async Task<IActionResult> GetUserById(string id)
     {

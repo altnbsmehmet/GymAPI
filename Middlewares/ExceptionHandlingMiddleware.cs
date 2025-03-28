@@ -4,6 +4,7 @@ using System;
 using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Serilog;
 
 public class ExceptionHandlingMiddleware
 {
@@ -21,7 +22,8 @@ public class ExceptionHandlingMiddleware
         try {
             await _next(context);
         } catch (Exception ex) {
-            _logger.LogError(ex, "Unhandled exception occurred.");
+            //_logger.LogError(ex, "Unhandled exception occurred.");
+            Log.Error(ex, "Unhandled exception occured.");
             //Console.WriteLine($"\u001b[31m\nException --> {ex.Message}\n\u001b[0m");
             await HandleExceptionAsync(context, ex);
         }
